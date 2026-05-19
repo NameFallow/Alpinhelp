@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App palette (AlpesQuest-inspired blue) -->
+    <color name="primary">#1565C0</color>
+    <color name="primary_dark">#0D47A1</color>
+    <color name="primary_variant">#1976D2</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="secondary">#00ACC1</color>
+    <color name="secondary_variant">#00838F</color>
+
+    <!-- UI elements -->
+    <color name="scanner_blue">#2196F3</color>
+    <color name="scanner_green">#4CAF50</color>
+    <color name="scanner_toolbar">#0D47A1</color>
+    <color name="scanner_bottom_bg">#1A1A2E</color>
+
+    <color name="red_delete">#C62828</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="surface">#F5F7FA</color>
+</resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Icon concept: mountain peak + GPS crosshair (AlpesQuest style)
+  White graphic on transparent, used over blue background
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Mountain silhouette -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,22 L30,68 L78,68 Z" />
+
+    <!-- Snow cap highlight -->
+    <path
+        android:fillColor="#BBDEFB"
+        android:pathData="M54,22 L44,40 L64,40 Z" />
+
+    <!-- GPS crosshair circle -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M54,76 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
+
+    <!-- Crosshair lines -->
+    <line
+        android:x1="54" android:y1="62"
+        android:x2="54" android:y2="68"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5" />
+    <line
+        android:x1="54" android:y1="84"
+        android:x2="54" android:y2="90"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5" />
+    <line
+        android:x1="40" android:y1="76"
+        android:x2="46" android:y2="76"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5" />
+    <line
+        android:x1="62" android:y1="76"
+        android:x2="68" android:y2="76"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5" />
+
+    <!-- Center dot -->
+    <circle
+        android:cx="54" android:cy="76"
+        android:r="2.5"
+        android:fillColor="#FFFFFF" />
+</vector>

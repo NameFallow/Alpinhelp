@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CoordScanner</string>
+    <string name="no_points">Нет точек. Нажмите + чтобы добавить</string>
+    <string name="add_point">Добавить точку</string>
+    <string name="tab_camera">Камера (OCR)</string>
+    <string name="tab_manual">Ручной ввод</string>
+    <string name="scan_hint">Наведите камеру на таблицу с координатами и нажмите «Сфотографировать»</string>
+    <string name="scan_ready">Готово к съёмке</string>
+    <string name="btn_scan">Открыть камеру</string>
+    <string name="btn_capture">Сфотографировать</string>
+    <string name="btn_save">Сохранить</string>
+    <string name="btn_edit">Изменить</string>
+    <string name="btn_delete">Удалить</string>
+    <string name="hint_name">Название точки</string>
+    <string name="hint_x">X (СК-42)</string>
+    <string name="hint_y">Y (СК-42)</string>
+    <string name="hint_zone">Номер зоны (1–32)</string>
+    <string name="action_export">Экспорт GPX</string>
+</resources>
