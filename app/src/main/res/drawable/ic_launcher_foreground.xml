@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Icon concept: mountain peak + GPS crosshair (AlpesQuest style)
-  White graphic on transparent, used over blue background
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -14,43 +10,45 @@
         android:fillColor="#FFFFFF"
         android:pathData="M54,22 L30,68 L78,68 Z" />
 
-    <!-- Snow cap highlight -->
+    <!-- Snow cap -->
     <path
         android:fillColor="#BBDEFB"
         android:pathData="M54,22 L44,40 L64,40 Z" />
 
-    <!-- GPS crosshair circle -->
+    <!-- GPS circle (drawn as path) -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M54,76 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
+        android:fillColor="#00000000"
+        android:pathData="M64,76 A10,10 0 1,0 64.001,76 Z" />
 
-    <!-- Crosshair lines -->
-    <line
-        android:x1="54" android:y1="62"
-        android:x2="54" android:y2="68"
+    <!-- Crosshair top -->
+    <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5" />
-    <line
-        android:x1="54" android:y1="84"
-        android:x2="54" android:y2="90"
+        android:strokeWidth="2.5"
+        android:pathData="M54,63 L54,69" />
+
+    <!-- Crosshair bottom -->
+    <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5" />
-    <line
-        android:x1="40" android:y1="76"
-        android:x2="46" android:y2="76"
+        android:strokeWidth="2.5"
+        android:pathData="M54,83 L54,89" />
+
+    <!-- Crosshair left -->
+    <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5" />
-    <line
-        android:x1="62" android:y1="76"
-        android:x2="68" android:y2="76"
+        android:strokeWidth="2.5"
+        android:pathData="M40,76 L46,76" />
+
+    <!-- Crosshair right -->
+    <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5" />
+        android:strokeWidth="2.5"
+        android:pathData="M62,76 L68,76" />
 
     <!-- Center dot -->
-    <circle
-        android:cx="54" android:cy="76"
-        android:r="2.5"
-        android:fillColor="#FFFFFF" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,76 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+
 </vector>

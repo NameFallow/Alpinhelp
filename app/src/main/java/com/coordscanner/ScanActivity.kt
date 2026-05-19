@@ -29,7 +29,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
-@androidx.camera.core.ExperimentalGetImage
+@OptIn(androidx.camera.core.ExperimentalGetImage::class)
 class ScanActivity : AppCompatActivity() {
 
     companion object {
@@ -102,6 +102,7 @@ class ScanActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    @androidx.camera.core.ExperimentalGetImage
     private fun analyzeFrame(imageProxy: ImageProxy) {
         // Throttle: skip frames that arrive too fast
         val now = System.currentTimeMillis()
