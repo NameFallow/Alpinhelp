@@ -29,6 +29,7 @@ object GpxExporter {
             appendLine("""<gpx version="1.1" creator="CoordScanner"""")
             appendLine("""  xmlns="http://www.topografix.com/GPX/1/1"""")
             appendLine("""  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"""")
+            appendLine("""  xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"""")
             appendLine("""  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">""")
             appendLine("  <metadata><time>$now</time></metadata>")
 
@@ -36,10 +37,20 @@ object GpxExporter {
                 val lat = "%.8f".format(p.latWgs84)
                 val lon = "%.8f".format(p.lonWgs84)
                 val name = escapeXml(p.name)
-                val desc = "СК-42: X=${p.xSk42}, Y=${p.ySk42}, Зона ${p.zone}"
+                val desc = if (p.xSk42 != 0.0)
+                    "СК-42: X=${p.xSk42.toLong()}, Y=${p.ySk42.toLong()}, Зона ${p.zone}"
+                else "WGS-84"
                 appendLine("""  <wpt lat="$lat" lon="$lon">""")
                 appendLine("    <name>$name</name>")
                 appendLine("    <desc>${escapeXml(desc)}</desc>")
+                appendLine("    <sym>Flag, Blue</sym>")
+                appendLine("    <type>Waypoint</type>")
+                appendLine("    <extensions>")
+                appendLine("      <color>#0055FF</color>")
+                appendLine("      <gpxx:WaypointExtension>")
+                appendLine("        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>")
+                appendLine("      </gpxx:WaypointExtension>")
+                appendLine("    </extensions>")
                 appendLine("  </wpt>")
             }
 
