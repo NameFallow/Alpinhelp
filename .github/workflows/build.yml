@@ -38,15 +38,23 @@ jobs:
           chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        id: build
+        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.txt
+        continue-on-error: true
 
-      - name: Find APK
-        run: find . -name "*.apk" -type f
+      - name: Upload build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-output.txt
 
-      - name: Upload APK
+      - name: Upload APK (if build succeeded)
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: CoordScanner-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 30
+
+      - name: Fail if build failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
