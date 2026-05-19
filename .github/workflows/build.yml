@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:   # можно запускать вручную кнопкой на GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,26 +23,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
+      - name: Install SDK components
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          yes | sdkmanager --licenses || true
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.6'
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Generate Gradle wrapper
+        run: |
+          gradle wrapper --gradle-version 8.6
+          chmod +x gradlew
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Build Debug APK
-        run: gradle assembleDebug
-        working-directory: ${{ github.workspace }}
+        run: ./gradlew assembleDebug --stacktrace
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CoordScanner-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-
-      - name: Show APK info
-        run: |
-          echo "✅ APK собран успешно!"
-          ls -lh app/build/outputs/apk/debug/app-debug.apk
