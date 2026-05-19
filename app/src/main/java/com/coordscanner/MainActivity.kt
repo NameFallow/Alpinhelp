@@ -37,12 +37,18 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.allPoints.observe(this) { points ->
             adapter.submitList(points)
-            val empty = points.isEmpty()
-            binding.emptyState.visibility = if (empty) View.VISIBLE else View.GONE
+            binding.emptyState.visibility = if (points.isEmpty()) View.VISIBLE else View.GONE
 
             val scanned = points.count { it.source == "scan" }
             val manual = points.count { it.source == "manual" }
-            binding.tvPointCount.text = "${points.size} точек  •  📷 $scanned  •  ✏️ $manual"
+            binding.tvPointCount.text = when {
+                points.isEmpty() -> "Нет точек"
+                else -> "${points.size} точек  •  📷 $scanned скан.  •  ✏️ $manual вручную"
+            }
+        }
+
+        binding.btnScan.setOnClickListener {
+            startActivity(Intent(this, ScanActivity::class.java))
         }
 
         binding.fab.setOnClickListener {
@@ -67,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         if (points.isEmpty()) {
             AlertDialog.Builder(this)
                 .setTitle("Экспорт GPX")
-                .setMessage("Нет точек для экспорта. Добавьте хотя бы одну точку.")
+                .setMessage("Нет точек для экспорта.")
                 .setPositiveButton("OK", null)
                 .show()
             return

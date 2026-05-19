@@ -10,6 +10,9 @@ import android.os.*
 import android.util.Log
 import android.util.Size
 import android.view.View
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -21,6 +24,7 @@ import com.coordscanner.databinding.ActivityScanBinding
 import com.coordscanner.model.Point
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.OcrParser
+import com.coordscanner.utils.ParsedCoord
 import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -35,8 +39,8 @@ class ScanActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ScanActivity"
-        private const val DEDUP_TIMEOUT_MS = 5000L
-        private const val MIN_FRAME_INTERVAL_MS = 300L  // анализируем чаще
+        private const val DEDUP_TIMEOUT_MS = 15_000L
+        private const val MIN_FRAME_INTERVAL_MS = 400L
     }
 
     private lateinit var binding: ActivityScanBinding
@@ -44,11 +48,14 @@ class ScanActivity : AppCompatActivity() {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
-    // Deduplication: "x_y_zone" -> timestamp of last save
     private val recentDetections = ConcurrentHashMap<String, Long>()
-
     private val lastFrameTime = AtomicLong(0L)
     private val isProcessing = AtomicBoolean(false)
+
+    // Confirmation state
+    @Volatile private var confirmationShowing = false
+    private var pendingPoint: ParsedCoord? = null
+
     private var debugVisible = false
 
     private val requestPermission = registerForActivityResult(
@@ -65,14 +72,31 @@ class ScanActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Сканирование"
+
+        // Move confirm card off-screen initially
+        binding.confirmCard.translationY = 1200f
+
+        binding.btnBack.setOnClickListener { finish() }
 
         binding.btnDebug.setOnClickListener {
             debugVisible = !debugVisible
             binding.scrollDebug.visibility = if (debugVisible) View.VISIBLE else View.GONE
             binding.btnDebug.text = if (debugVisible) "OCR ▲" else "OCR"
+        }
+
+        binding.btnSave.setOnClickListener {
+            val p = pendingPoint ?: return@setOnClickListener
+            val name = binding.etConfirmName.text.toString().trim().ifEmpty { "Точка" }
+            savePoint(p.copy(name = name))
+            hideKeyboard()
+            hideConfirmation(confirmed = true)
+        }
+
+        binding.btnNo.setOnClickListener {
+            val p = pendingPoint
+            if (p != null) recentDetections[makeKey(p)] = System.currentTimeMillis()
+            hideKeyboard()
+            hideConfirmation(confirmed = false)
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -99,10 +123,7 @@ class ScanActivity : AppCompatActivity() {
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
-                    this,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    preview,
-                    analysis
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Camera bind failed", e)
@@ -112,7 +133,6 @@ class ScanActivity : AppCompatActivity() {
 
     @androidx.camera.core.ExperimentalGetImage
     private fun analyzeFrame(imageProxy: ImageProxy) {
-        // Throttle: skip frames that arrive too fast
         val now = System.currentTimeMillis()
         if (now - lastFrameTime.get() < MIN_FRAME_INTERVAL_MS || isProcessing.get()) {
             imageProxy.close()
@@ -138,9 +158,9 @@ class ScanActivity : AppCompatActivity() {
                 imageProxy.close()
                 isProcessing.set(false)
 
+                val rawText = visionText.text
                 val highlightBoxes = mutableListOf<RectF>()
 
-                // Highlight all blocks that look like coordinates
                 for (block in visionText.textBlocks) {
                     if (OcrParser.hasCoordinatePattern(block.text)) {
                         block.boundingBox?.let { bb ->
@@ -149,32 +169,29 @@ class ScanActivity : AppCompatActivity() {
                     }
                 }
 
-                val rawText = visionText.text
                 runOnUiThread {
                     binding.overlayView.setRects(highlightBoxes)
-                    binding.tvStatus.text = if (highlightBoxes.isNotEmpty())
-                        "Обнаружены координаты, распознаю..."
-                    else
-                        "Сканирование... наведите на таблицу координат"
+                    if (!confirmationShowing) {
+                        binding.tvStatus.text = if (highlightBoxes.isNotEmpty())
+                            "Координаты обнаружены..."
+                        else
+                            "Наведите на координаты"
+                    }
                     if (debugVisible && rawText.isNotBlank()) {
                         binding.tvDebugOcr.text = rawText
-                        binding.scrollDebug.post { binding.scrollDebug.scrollTo(0, 0) }
                     }
                 }
 
-                // Parse and save new points
-                val parsed = OcrParser.parseText(rawText)
-                for (p in parsed) {
-                    val key = if (p.isWgs84) {
-                        "wgs_${"%.5f".format(p.lat)}_${"%.5f".format(p.lon)}"
-                    } else {
-                        "${p.x.toLong()}_${p.y.toLong()}_${p.zone}"
-                    }
-
-                    val lastSeen = recentDetections[key]
-                    if (lastSeen == null || System.currentTimeMillis() - lastSeen > DEDUP_TIMEOUT_MS) {
-                        recentDetections[key] = System.currentTimeMillis()
-                        savePoint(p)
+                // Only trigger confirmation when not already showing one
+                if (!confirmationShowing) {
+                    val parsed = OcrParser.parseText(rawText)
+                    for (p in parsed) {
+                        val key = makeKey(p)
+                        val lastSeen = recentDetections[key]
+                        if (lastSeen == null || now - lastSeen > DEDUP_TIMEOUT_MS) {
+                            runOnUiThread { showConfirmation(p) }
+                            break
+                        }
                     }
                 }
             }
@@ -184,16 +201,67 @@ class ScanActivity : AppCompatActivity() {
             }
     }
 
-    private fun savePoint(p: com.coordscanner.utils.ParsedCoord) {
-        val lat: Double
-        val lon: Double
-        val x: Double
-        val y: Double
-        val zone: Int
+    private fun showConfirmation(p: ParsedCoord) {
+        pendingPoint = p
+        confirmationShowing = true
+
+        // Mark as recently seen so same coords don't trigger again immediately
+        recentDetections[makeKey(p)] = System.currentTimeMillis()
+
+        val (lat, lon) = if (!p.isWgs84)
+            CoordConverter.sk42ToWgs84(p.x, p.y, p.zone)
+        else
+            Pair(p.lat, p.lon)
+
+        binding.etConfirmName.setText(p.name)
+        binding.tvConfirmSystem.text = p.system
+
+        binding.tvConfirmSk42.text = if (!p.isWgs84)
+            "X: %,d\nY: %,d  зона %d".format(p.x.toLong(), p.y.toLong(), p.zone)
+        else
+            "WGS-84 (градусы)"
+
+        binding.tvConfirmWgs84.text = "%.5f° N\n%.5f° E".format(lat, lon)
+
+        binding.tvLastPoint.visibility = View.INVISIBLE
+        binding.tvLastPoint.text = ""
+
+        // Fade out status pill, slide up card
+        binding.statusPill.animate().alpha(0f).setDuration(200).start()
+        binding.confirmCard.animate()
+            .translationY(0f)
+            .setDuration(350)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        vibrateShort()
+    }
+
+    private fun hideConfirmation(confirmed: Boolean) {
+        confirmationShowing = false
+        pendingPoint = null
+
+        binding.confirmCard.animate()
+            .translationY(1200f)
+            .setDuration(280)
+            .setInterpolator(AccelerateInterpolator())
+            .withEndAction {
+                if (!confirmed) {
+                    binding.tvLastPoint.visibility = View.INVISIBLE
+                }
+            }
+            .start()
+
+        binding.statusPill.animate().alpha(1f).setDuration(200).start()
+        binding.tvStatus.text = "Наведите на координаты"
+    }
+
+    private fun savePoint(p: ParsedCoord) {
+        val lat: Double; val lon: Double
+        val x: Double; val y: Double; val zone: Int
 
         if (p.isWgs84) {
-            lat = p.lat
-            lon = p.lon
+            lat = p.lat; lon = p.lon
             x = 0.0; y = 0.0; zone = 0
         } else {
             val (la, lo) = CoordConverter.sk42ToWgs84(p.x, p.y, p.zone)
@@ -208,59 +276,49 @@ class ScanActivity : AppCompatActivity() {
         )
         viewModel.insert(point)
 
-        runOnUiThread {
-            binding.overlayView.triggerFlash()
-            binding.tvLastPoint.text = "✓ ${p.name}  [${p.system}]"
-            binding.tvStatus.text = "Продолжаю сканирование..."
-            vibrateShort()
-            playBeep()
-        }
+        binding.overlayView.triggerFlash()
+        binding.tvLastPoint.text = "✓ Сохранено: ${p.name}"
+        binding.tvLastPoint.visibility = View.VISIBLE
+        playBeep()
 
-        Log.d(TAG, "Point saved: ${p.name}")
+        Log.d(TAG, "Saved: ${p.name}  x=${p.x}  y=${p.y}")
     }
 
-    // Transform bounding box from image space to PreviewView screen space
+    private fun makeKey(p: ParsedCoord) = if (p.isWgs84)
+        "wgs_${"%.5f".format(p.lat)}_${"%.5f".format(p.lon)}"
+    else
+        "${p.x.toLong()}_${p.y.toLong()}_${p.zone}"
+
     private fun transformRect(rect: android.graphics.Rect, imgW: Int, imgH: Int, rotation: Int): RectF {
         val vw = binding.viewFinder.width.toFloat()
         val vh = binding.viewFinder.height.toFloat()
         if (vw == 0f || vh == 0f) return RectF()
 
-        // After rotation, effective image dimensions
         val (rotW, rotH) = if (rotation == 90 || rotation == 270) Pair(imgH, imgW) else Pair(imgW, imgH)
-
-        // CenterCrop scaling (same as PreviewView default)
         val scaleX = vw / rotW
         val scaleY = vh / rotH
         val scale = maxOf(scaleX, scaleY)
         val offsetX = (vw - rotW * scale) / 2f
         val offsetY = (vh - rotH * scale) / 2f
 
-        // Rotate rect corners, then apply scale + offset
         val pts = when (rotation) {
-            90 -> floatArrayOf(
-                rect.top.toFloat(), (imgW - rect.right).toFloat(),
-                rect.bottom.toFloat(), (imgW - rect.left).toFloat()
-            )
-            180 -> floatArrayOf(
-                (imgW - rect.right).toFloat(), (imgH - rect.bottom).toFloat(),
-                (imgW - rect.left).toFloat(), (imgH - rect.top).toFloat()
-            )
-            270 -> floatArrayOf(
-                (imgH - rect.bottom).toFloat(), rect.left.toFloat(),
-                (imgH - rect.top).toFloat(), rect.right.toFloat()
-            )
-            else -> floatArrayOf(
-                rect.left.toFloat(), rect.top.toFloat(),
-                rect.right.toFloat(), rect.bottom.toFloat()
-            )
+            90  -> floatArrayOf(rect.top.toFloat(), (imgW - rect.right).toFloat(),
+                                rect.bottom.toFloat(), (imgW - rect.left).toFloat())
+            180 -> floatArrayOf((imgW - rect.right).toFloat(), (imgH - rect.bottom).toFloat(),
+                                (imgW - rect.left).toFloat(), (imgH - rect.top).toFloat())
+            270 -> floatArrayOf((imgH - rect.bottom).toFloat(), rect.left.toFloat(),
+                                (imgH - rect.top).toFloat(), rect.right.toFloat())
+            else -> floatArrayOf(rect.left.toFloat(), rect.top.toFloat(),
+                                 rect.right.toFloat(), rect.bottom.toFloat())
         }
 
-        return RectF(
-            pts[0] * scale + offsetX,
-            pts[1] * scale + offsetY,
-            pts[2] * scale + offsetX,
-            pts[3] * scale + offsetY
-        )
+        return RectF(pts[0] * scale + offsetX, pts[1] * scale + offsetY,
+                     pts[2] * scale + offsetX, pts[3] * scale + offsetY)
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.root.windowToken, 0)
     }
 
     private fun vibrateShort() {
@@ -280,8 +338,6 @@ class ScanActivity : AppCompatActivity() {
             Handler(Looper.getMainLooper()).postDelayed({ tone.release() }, 300)
         } catch (_: Exception) {}
     }
-
-    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
     override fun onDestroy() {
         super.onDestroy()

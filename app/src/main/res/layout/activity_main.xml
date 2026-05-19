@@ -4,64 +4,84 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/surface">
+    android:background="@color/navy_bg">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:elevation="4dp">
+        android:background="@color/navy_deep"
+        app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/primary"
-            android:paddingHorizontal="4dp"
+            android:background="@color/navy_deep"
             app:titleTextColor="@color/white"
-            app:subtitleTextColor="#AAFFFFFF" />
+            app:subtitleTextColor="@color/text_secondary" />
+
+        <!-- Action area below toolbar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="14dp">
+
+            <TextView
+                android:id="@+id/tvPointCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Нет точек"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnScan"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="2"
+                    android:layout_marginEnd="8dp"
+                    android:text="Сканировать"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:backgroundTint="@color/primary"
+                    app:iconTint="@color/white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fab"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="+ Вручную"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    app:strokeColor="@color/navy_stroke" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/navy_stroke" />
+
     </com.google.android.material.appbar.AppBarLayout>
 
+    <!-- Content -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Stats bar -->
-        <LinearLayout
-            android:id="@+id/statsBar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@color/primary_variant"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvPointCount"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="0 точек"
-                android:textColor="#DDFFFFFF"
-                android:textSize="13sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExportBar"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:text="Экспорт GPX"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:paddingHorizontal="12dp"
-                app:strokeColor="@color/white"
-                app:iconTint="@color/white"
-                app:icon="@android:drawable/ic_menu_share" />
-        </LinearLayout>
-
-        <!-- Points list -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
@@ -73,7 +93,6 @@
                 android:paddingVertical="8dp"
                 android:clipToPadding="false" />
 
-            <!-- Empty state -->
             <LinearLayout
                 android:id="@+id/emptyState"
                 android:layout_width="wrap_content"
@@ -86,38 +105,41 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📍"
-                    android:textSize="48sp" />
+                    android:text="📡"
+                    android:textSize="56sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Нет точек"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="#9E9E9E"
-                    android:layout_marginTop="8dp" />
+                    android:text="Точек нет"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="18sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_marginTop="12dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Нажмите + чтобы добавить"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="#BDBDBD" />
+                    android:text="Нажмите «Сканировать»"
+                    android:textColor="@color/text_hint"
+                    android:textSize="13sp"
+                    android:layout_marginTop="4dp" />
             </LinearLayout>
         </FrameLayout>
     </LinearLayout>
 
-    <!-- FAB -->
+    <!-- Hidden: export fab kept for legacy, click handled via toolbar menu -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
+        android:id="@+id/btnExportBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        android:contentDescription="@string/add_point"
-        app:backgroundTint="@color/secondary"
-        app:tint="@color/white"
-        app:srcCompat="@android:drawable/ic_input_add"
-        app:elevation="8dp" />
+        android:contentDescription="Экспорт GPX"
+        android:src="@android:drawable/ic_menu_share"
+        app:backgroundTint="@color/navy_surface"
+        app:tint="@color/text_secondary"
+        app:elevation="4dp"
+        android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

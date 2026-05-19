@@ -1,129 +1,295 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#000">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <!-- Camera preview -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent" />
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/scanner_toolbar"
-            app:navigationIcon="?attr/homeAsUpIndicator"
-            app:titleTextColor="@android:color/white" />
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <!-- Camera + Overlay stacked -->
-    <FrameLayout
+    <!-- Coordinate highlight overlay -->
+    <com.coordscanner.CameraOverlayView
+        android:id="@+id/overlayView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent" />
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/viewFinder"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+    <!-- Top gradient for readability -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@drawable/gradient_top" />
 
-        <!-- Blue highlight overlay -->
-        <com.coordscanner.CameraOverlayView
-            android:id="@+id/overlayView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <!-- Scanning animation indicator (top-right) -->
-        <ProgressBar
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="12dp"
-            android:indeterminateTint="@color/scanner_blue" />
-
-        <!-- Hint text at top center -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
-            android:layout_marginTop="12dp"
-            android:background="#88000000"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp"
-            android:text="Наведите на таблицу координат"
-            android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-medium" />
-    </FrameLayout>
-
-    <!-- Status bar at bottom -->
+    <!-- Floating top bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@color/scanner_bottom_bg"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="28dp"
+        android:paddingHorizontal="8dp"
+        android:paddingBottom="8dp">
 
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Назад" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Сканирование"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium"
+            android:paddingStart="4dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDebug"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="OCR"
+            android:textColor="#AAFFFFFF"
+            android:textSize="11sp"
+            android:paddingHorizontal="10dp"
+            app:strokeColor="#44FFFFFF" />
+    </LinearLayout>
+
+    <!-- OCR debug panel (hidden by default) -->
+    <ScrollView
+        android:id="@+id/scrollDebug"
+        android:layout_width="match_parent"
+        android:layout_height="130dp"
+        android:layout_marginTop="84dp"
+        android:visibility="gone"
+        android:background="#EE06111E">
+
+        <TextView
+            android:id="@+id/tvDebugOcr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#CCFFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:padding="8dp" />
+    </ScrollView>
+
+    <!-- Scanning status pill -->
+    <LinearLayout
+        android:id="@+id/statusPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="200dp"
+        android:background="@drawable/status_pill_bg"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
+
+        <ProgressBar
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:indeterminateTint="@color/primary"
+            style="?android:attr/progressBarStyleSmall" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Наведите на координаты"
+            android:textColor="#DDFFFFFF"
+            android:textSize="13sp"
+            android:paddingStart="10dp" />
+    </LinearLayout>
+
+    <!-- Confirmation card — starts off-screen, slides up on detection -->
+    <LinearLayout
+        android:id="@+id/confirmCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/confirm_card_bg"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="28dp"
+        android:elevation="16dp">
+
+        <!-- Drag handle -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/pill_handle" />
+
+        <!-- Title -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
 
             <TextView
-                android:id="@+id/tvStatus"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Сканирование в реальном времени..."
-                android:textColor="#AAFFFFFF"
-                android:textSize="12sp" />
+                android:text="Координаты распознаны"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium" />
 
-            <Button
-                android:id="@+id/btnDebug"
+            <TextView
+                android:id="@+id/tvConfirmSystem"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="OCR"
-                android:textSize="10sp"
-                android:minHeight="0dp"
+                android:text="СК-42"
+                android:textColor="@color/accent"
+                android:textSize="12sp"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                android:paddingVertical="2dp"
+                android:background="@drawable/badge_bg" />
         </LinearLayout>
 
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/navy_stroke"
+            android:layout_marginBottom="14dp" />
+
+        <!-- Coordinate display -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="14dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="СК-42"
+                    android:textColor="@color/text_hint"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvConfirmSk42"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="—"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="WGS-84"
+                    android:textColor="@color/text_hint"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvConfirmWgs84"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="—"
+                    android:textColor="@color/accent"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Name field -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Название точки"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/etConfirmName"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/edit_bg"
+            android:paddingHorizontal="12dp"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textColorHint="@color/text_hint"
+            android:hint="Точка"
+            android:inputType="text"
+            android:maxLines="1"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNo"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="10dp"
+                android:text="НЕТ"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                app:strokeColor="@color/navy_stroke" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="2"
+                android:text="СОХРАНИТЬ"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"
+                app:backgroundTint="@color/primary" />
+        </LinearLayout>
+
+        <!-- Saved feedback -->
         <TextView
             android:id="@+id/tvLastPoint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text=""
             android:textColor="@color/scanner_green"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:fontFamily="sans-serif-medium"
-            android:layout_marginTop="2dp" />
-
-        <!-- Debug: raw OCR output, hidden by default -->
-        <ScrollView
-            android:id="@+id/scrollDebug"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="6dp"
-            android:visibility="gone"
-            android:background="#CC000000">
-
-            <TextView
-                android:id="@+id/tvDebugOcr"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textColor="#CCFFFFFF"
-                android:textSize="10sp"
-                android:fontFamily="monospace"
-                android:padding="6dp" />
-        </ScrollView>
+            android:textSize="13sp"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:visibility="invisible" />
     </LinearLayout>
-</LinearLayout>
+
+</FrameLayout>

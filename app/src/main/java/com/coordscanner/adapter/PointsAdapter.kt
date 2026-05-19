@@ -23,23 +23,26 @@ class PointsAdapter(
 
             val isScanned = point.source == "scan"
 
+            // Left stripe and badge differ by source
+            binding.sourceStripe.setBackgroundColor(
+                if (isScanned) Color.parseColor("#2196F3") else Color.parseColor("#3A5070")
+            )
+
             if (isScanned) {
-                // Blue accent for camera-scanned points
-                binding.root.strokeColor = Color.parseColor("#2196F3")
-                binding.root.strokeWidth = 3
-                binding.tvName.setTextColor(Color.parseColor("#1565C0"))
-                binding.tvSourceBadge.text = "📷 Сканер"
+                binding.tvSourceBadge.text = "📷 Скан"
                 binding.tvSourceBadge.setTextColor(Color.parseColor("#2196F3"))
             } else {
-                binding.root.strokeColor = Color.parseColor("#E0E0E0")
-                binding.root.strokeWidth = 1
-                binding.tvName.setTextColor(Color.parseColor("#212121"))
                 binding.tvSourceBadge.text = "✏️ Вручную"
-                binding.tvSourceBadge.setTextColor(Color.parseColor("#757575"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#8BB4D8"))
             }
 
+            // Reset card stroke to match dark theme
+            binding.root.strokeColor = Color.parseColor("#1C3050")
+            binding.root.strokeWidth = 1
+
             if (point.xSk42 != 0.0) {
-                binding.tvSk42.text = "СК-42  X: ${point.xSk42}  Y: ${point.ySk42}  Зона ${point.zone}"
+                binding.tvSk42.text = "X: %,d  Y: %,d  зона %d"
+                    .format(point.xSk42.toLong(), point.ySk42.toLong(), point.zone)
             } else {
                 binding.tvSk42.text = "WGS-84 (из градусов)"
             }
