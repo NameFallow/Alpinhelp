@@ -9,6 +9,7 @@ import android.media.ToneGenerator
 import android.os.*
 import android.util.Log
 import android.util.Size
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -48,6 +49,7 @@ class ScanActivity : AppCompatActivity() {
 
     private val lastFrameTime = AtomicLong(0L)
     private val isProcessing = AtomicBoolean(false)
+    private var debugVisible = false
 
     private val requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -66,6 +68,12 @@ class ScanActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "Сканирование"
+
+        binding.btnDebug.setOnClickListener {
+            debugVisible = !debugVisible
+            binding.scrollDebug.visibility = if (debugVisible) View.VISIBLE else View.GONE
+            binding.btnDebug.text = if (debugVisible) "OCR ▲" else "OCR"
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
@@ -141,16 +149,21 @@ class ScanActivity : AppCompatActivity() {
                     }
                 }
 
+                val rawText = visionText.text
                 runOnUiThread {
                     binding.overlayView.setRects(highlightBoxes)
                     binding.tvStatus.text = if (highlightBoxes.isNotEmpty())
                         "Обнаружены координаты, распознаю..."
                     else
                         "Сканирование... наведите на таблицу координат"
+                    if (debugVisible && rawText.isNotBlank()) {
+                        binding.tvDebugOcr.text = rawText
+                        binding.scrollDebug.post { binding.scrollDebug.scrollTo(0, 0) }
+                    }
                 }
 
                 // Parse and save new points
-                val parsed = OcrParser.parseText(visionText.text)
+                val parsed = OcrParser.parseText(rawText)
                 for (p in parsed) {
                     val key = if (p.isWgs84) {
                         "wgs_${"%.5f".format(p.lat)}_${"%.5f".format(p.lon)}"

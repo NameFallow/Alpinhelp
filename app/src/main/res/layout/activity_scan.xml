@@ -69,13 +69,32 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="12dp">
 
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Сканирование в реальном времени..."
-            android:textColor="#AAFFFFFF"
-            android:textSize="12sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Сканирование в реальном времени..."
+                android:textColor="#AAFFFFFF"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnDebug"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OCR"
+                android:textSize="10sp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvLastPoint"
@@ -86,5 +105,25 @@
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:fontFamily="sans-serif-medium"
             android:layout_marginTop="2dp" />
+
+        <!-- Debug: raw OCR output, hidden by default -->
+        <ScrollView
+            android:id="@+id/scrollDebug"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="6dp"
+            android:visibility="gone"
+            android:background="#CC000000">
+
+            <TextView
+                android:id="@+id/tvDebugOcr"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#CCFFFFFF"
+                android:textSize="10sp"
+                android:fontFamily="monospace"
+                android:padding="6dp" />
+        </ScrollView>
     </LinearLayout>
 </LinearLayout>
