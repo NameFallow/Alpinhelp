@@ -35,7 +35,7 @@ class ScanActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "ScanActivity"
         private const val DEDUP_TIMEOUT_MS = 5000L
-        private const val MIN_FRAME_INTERVAL_MS = 400L
+        private const val MIN_FRAME_INTERVAL_MS = 300L  // анализируем чаще
     }
 
     private lateinit var binding: ActivityScanBinding
@@ -141,7 +141,13 @@ class ScanActivity : AppCompatActivity() {
                     }
                 }
 
-                runOnUiThread { binding.overlayView.setRects(highlightBoxes) }
+                runOnUiThread {
+                    binding.overlayView.setRects(highlightBoxes)
+                    binding.tvStatus.text = if (highlightBoxes.isNotEmpty())
+                        "Обнаружены координаты, распознаю..."
+                    else
+                        "Сканирование... наведите на таблицу координат"
+                }
 
                 // Parse and save new points
                 val parsed = OcrParser.parseText(visionText.text)
@@ -191,7 +197,7 @@ class ScanActivity : AppCompatActivity() {
 
         runOnUiThread {
             binding.overlayView.triggerFlash()
-            binding.tvLastPoint.text = "✓ Добавлено: ${p.name}"
+            binding.tvLastPoint.text = "✓ ${p.name}  [${p.system}]"
             binding.tvStatus.text = "Продолжаю сканирование..."
             vibrateShort()
             playBeep()
