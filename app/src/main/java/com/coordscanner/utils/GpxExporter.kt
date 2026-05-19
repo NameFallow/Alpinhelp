@@ -37,8 +37,13 @@ object GpxExporter {
                 val lat = "%.8f".format(p.latWgs84)
                 val lon = "%.8f".format(p.lonWgs84)
                 val name = escapeXml(p.name)
+                val desc = if (p.xSk42 != 0.0)
+                    "X: ${p.xSk42.toLong()}  Y: ${p.ySk42.toLong()}  зона ${p.zone}"
+                else
+                    "WGS-84: %.5f N  %.5f E".format(p.latWgs84, p.lonWgs84)
                 appendLine("""  <wpt lat="$lat" lon="$lon">""")
                 appendLine("    <name>$name</name>")
+                appendLine("    <desc>${escapeXml(desc)}</desc>")
                 appendLine("    <sym>Circle</sym>")
                 appendLine("    <type>Waypoint</type>")
                 appendLine("    <extensions>")
