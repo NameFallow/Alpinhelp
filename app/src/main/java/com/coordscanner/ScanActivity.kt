@@ -32,6 +32,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 @OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -40,7 +41,9 @@ class ScanActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "ScanActivity"
         private const val DEDUP_TIMEOUT_MS = 15_000L
-        private const val MIN_FRAME_INTERVAL_MS = 400L
+        private const val MIN_FRAME_INTERVAL_MS = 500L
+        // Number of consecutive frames with same coord before confirming
+        private const val REQUIRED_FRAMES = 3
     }
 
     private lateinit var binding: ActivityScanBinding
@@ -52,11 +55,31 @@ class ScanActivity : AppCompatActivity() {
     private val lastFrameTime = AtomicLong(0L)
     private val isProcessing = AtomicBoolean(false)
 
+    // Stability state: same coord must appear REQUIRED_FRAMES in a row
+    @Volatile private var candidateKey: String? = null
+    @Volatile private var candidatePoint: ParsedCoord? = null
+    private val candidateFrames = AtomicInteger(0)
+
     // Confirmation state
     @Volatile private var confirmationShowing = false
     private var pendingPoint: ParsedCoord? = null
 
+    // Selected color for the point
+    private var selectedColor = "#0055FF"
+
     private var debugVisible = false
+
+    // Map: View id → hex color
+    private val colorMap: Map<Int, String> by lazy {
+        mapOf(
+            R.id.colorDotBlue   to "#0055FF",
+            R.id.colorDotRed    to "#FF2020",
+            R.id.colorDotGreen  to "#00BB00",
+            R.id.colorDotOrange to "#FF8800",
+            R.id.colorDotYellow to "#FFD700",
+            R.id.colorDotPurple to "#9900CC"
+        )
+    }
 
     private val requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -73,7 +96,6 @@ class ScanActivity : AppCompatActivity() {
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Move confirm card off-screen initially
         binding.confirmCard.translationY = 1200f
 
         binding.btnBack.setOnClickListener { finish() }
@@ -84,10 +106,12 @@ class ScanActivity : AppCompatActivity() {
             binding.btnDebug.text = if (debugVisible) "OCR ▲" else "OCR"
         }
 
+        setupColorPicker()
+
         binding.btnSave.setOnClickListener {
             val p = pendingPoint ?: return@setOnClickListener
             val name = binding.etConfirmName.text.toString().trim().ifEmpty { "Точка" }
-            savePoint(p.copy(name = name))
+            savePoint(p.copy(name = name), selectedColor)
             hideKeyboard()
             hideConfirmation(confirmed = true)
         }
@@ -95,6 +119,7 @@ class ScanActivity : AppCompatActivity() {
         binding.btnNo.setOnClickListener {
             val p = pendingPoint
             if (p != null) recentDetections[makeKey(p)] = System.currentTimeMillis()
+            resetCandidate()
             hideKeyboard()
             hideConfirmation(confirmed = false)
         }
@@ -103,6 +128,22 @@ class ScanActivity : AppCompatActivity() {
             == PackageManager.PERMISSION_GRANTED
         ) startCamera()
         else requestPermission.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun setupColorPicker() {
+        for ((viewId, color) in colorMap) {
+            findViewById<View>(viewId).setOnClickListener { selectColor(color) }
+        }
+        selectColor(selectedColor)
+    }
+
+    private fun selectColor(color: String) {
+        selectedColor = color
+        for ((viewId, dotColor) in colorMap) {
+            val dot = findViewById<View>(viewId)
+            val scale = if (dotColor == color) 1.4f else 1.0f
+            dot.animate().scaleX(scale).scaleY(scale).setDuration(150).start()
+        }
     }
 
     private fun startCamera() {
@@ -171,28 +212,13 @@ class ScanActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     binding.overlayView.setRects(highlightBoxes)
-                    if (!confirmationShowing) {
-                        binding.tvStatus.text = if (highlightBoxes.isNotEmpty())
-                            "Координаты обнаружены..."
-                        else
-                            "Наведите на координаты"
-                    }
                     if (debugVisible && rawText.isNotBlank()) {
                         binding.tvDebugOcr.text = rawText
                     }
                 }
 
-                // Only trigger confirmation when not already showing one
                 if (!confirmationShowing) {
-                    val parsed = OcrParser.parseText(rawText)
-                    for (p in parsed) {
-                        val key = makeKey(p)
-                        val lastSeen = recentDetections[key]
-                        if (lastSeen == null || now - lastSeen > DEDUP_TIMEOUT_MS) {
-                            runOnUiThread { showConfirmation(p) }
-                            break
-                        }
-                    }
+                    processStability(rawText, now)
                 }
             }
             .addOnFailureListener {
@@ -201,11 +227,55 @@ class ScanActivity : AppCompatActivity() {
             }
     }
 
+    private fun processStability(rawText: String, now: Long) {
+        val parsed = OcrParser.parseText(rawText)
+
+        // Find the first coordinate that hasn't been recently saved
+        val newPoint = parsed.firstOrNull { p ->
+            val k = makeKey(p)
+            val lastSeen = recentDetections[k]
+            lastSeen == null || now - lastSeen > DEDUP_TIMEOUT_MS
+        }
+
+        when {
+            newPoint == null -> {
+                // No valid coordinates visible — reset candidate
+                if (candidateFrames.get() > 0) {
+                    resetCandidate()
+                    runOnUiThread { binding.tvStatus.text = "Наведите на координаты" }
+                }
+            }
+            makeKey(newPoint) == candidateKey -> {
+                // Same candidate — increment stability counter
+                val frames = candidateFrames.incrementAndGet()
+                val progress = "●".repeat(frames) + "○".repeat(maxOf(0, REQUIRED_FRAMES - frames))
+                runOnUiThread { binding.tvStatus.text = "Держите камеру... $progress" }
+
+                if (frames >= REQUIRED_FRAMES) {
+                    val confirmed = newPoint
+                    resetCandidate()
+                    runOnUiThread { showConfirmation(confirmed) }
+                }
+            }
+            else -> {
+                // New different candidate — start fresh
+                candidateKey = makeKey(newPoint)
+                candidatePoint = newPoint
+                candidateFrames.set(1)
+                runOnUiThread { binding.tvStatus.text = "Держите камеру... ●○○" }
+            }
+        }
+    }
+
+    private fun resetCandidate() {
+        candidateKey = null
+        candidatePoint = null
+        candidateFrames.set(0)
+    }
+
     private fun showConfirmation(p: ParsedCoord) {
         pendingPoint = p
         confirmationShowing = true
-
-        // Mark as recently seen so same coords don't trigger again immediately
         recentDetections[makeKey(p)] = System.currentTimeMillis()
 
         val (lat, lon) = if (!p.isWgs84)
@@ -226,7 +296,9 @@ class ScanActivity : AppCompatActivity() {
         binding.tvLastPoint.visibility = View.INVISIBLE
         binding.tvLastPoint.text = ""
 
-        // Fade out status pill, slide up card
+        // Reset color to default blue on each new confirmation
+        selectColor("#0055FF")
+
         binding.statusPill.animate().alpha(0f).setDuration(200).start()
         binding.confirmCard.animate()
             .translationY(0f)
@@ -245,18 +317,13 @@ class ScanActivity : AppCompatActivity() {
             .translationY(1200f)
             .setDuration(280)
             .setInterpolator(AccelerateInterpolator())
-            .withEndAction {
-                if (!confirmed) {
-                    binding.tvLastPoint.visibility = View.INVISIBLE
-                }
-            }
             .start()
 
         binding.statusPill.animate().alpha(1f).setDuration(200).start()
         binding.tvStatus.text = "Наведите на координаты"
     }
 
-    private fun savePoint(p: ParsedCoord) {
+    private fun savePoint(p: ParsedCoord, color: String) {
         val lat: Double; val lon: Double
         val x: Double; val y: Double; val zone: Int
 
@@ -268,20 +335,17 @@ class ScanActivity : AppCompatActivity() {
             lat = la; lon = lo; x = p.x; y = p.y; zone = p.zone
         }
 
-        val point = Point(
-            name = p.name,
-            xSk42 = x, ySk42 = y, zone = zone,
-            latWgs84 = lat, lonWgs84 = lon,
-            source = "scan"
+        viewModel.insert(
+            Point(name = p.name, xSk42 = x, ySk42 = y, zone = zone,
+                  latWgs84 = lat, lonWgs84 = lon, source = "scan", color = color)
         )
-        viewModel.insert(point)
 
         binding.overlayView.triggerFlash()
         binding.tvLastPoint.text = "✓ Сохранено: ${p.name}"
         binding.tvLastPoint.visibility = View.VISIBLE
         playBeep()
 
-        Log.d(TAG, "Saved: ${p.name}  x=${p.x}  y=${p.y}")
+        Log.d(TAG, "Saved: ${p.name}  color=$color  x=${p.x}  y=${p.y}")
     }
 
     private fun makeKey(p: ParsedCoord) = if (p.isWgs84)
@@ -295,9 +359,7 @@ class ScanActivity : AppCompatActivity() {
         if (vw == 0f || vh == 0f) return RectF()
 
         val (rotW, rotH) = if (rotation == 90 || rotation == 270) Pair(imgH, imgW) else Pair(imgW, imgH)
-        val scaleX = vw / rotW
-        val scaleY = vh / rotH
-        val scale = maxOf(scaleX, scaleY)
+        val scale = maxOf(vw / rotW, vh / rotH)
         val offsetX = (vw - rotW * scale) / 2f
         val offsetY = (vh - rotH * scale) / 2f
 

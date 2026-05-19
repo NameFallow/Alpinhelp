@@ -46,7 +46,7 @@ object GpxExporter {
                 appendLine("    <sym>Flag, Blue</sym>")
                 appendLine("    <type>Waypoint</type>")
                 appendLine("    <extensions>")
-                appendLine("      <color>#0055FF</color>")
+                appendLine("      <color>${p.color}</color>")
                 appendLine("      <gpxx:WaypointExtension>")
                 appendLine("        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>")
                 appendLine("      </gpxx:WaypointExtension>")

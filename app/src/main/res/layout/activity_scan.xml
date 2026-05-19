@@ -250,6 +250,71 @@
             android:maxLines="1"
             android:layout_marginBottom="16dp" />
 
+        <!-- Color picker -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Цвет точки на карте"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:layout_marginBottom="10dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="start"
+            android:layout_marginBottom="16dp">
+
+            <View
+                android:id="@+id/colorDotBlue"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#0055FF" />
+
+            <View
+                android:id="@+id/colorDotRed"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FF2020" />
+
+            <View
+                android:id="@+id/colorDotGreen"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#00BB00" />
+
+            <View
+                android:id="@+id/colorDotOrange"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FF8800" />
+
+            <View
+                android:id="@+id/colorDotYellow"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FFD700" />
+
+            <View
+                android:id="@+id/colorDotPurple"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_margin="5dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#9900CC" />
+        </LinearLayout>
+
         <!-- Buttons -->
         <LinearLayout
             android:layout_width="match_parent"

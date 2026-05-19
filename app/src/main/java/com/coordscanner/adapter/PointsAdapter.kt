@@ -23,10 +23,13 @@ class PointsAdapter(
 
             val isScanned = point.source == "scan"
 
-            // Left stripe and badge differ by source
-            binding.sourceStripe.setBackgroundColor(
-                if (isScanned) Color.parseColor("#2196F3") else Color.parseColor("#3A5070")
-            )
+            // Left stripe: use point's saved color
+            val stripeColor = try {
+                Color.parseColor(point.color)
+            } catch (_: Exception) {
+                Color.parseColor("#0055FF")
+            }
+            binding.sourceStripe.setBackgroundColor(stripeColor)
 
             if (isScanned) {
                 binding.tvSourceBadge.text = "📷 Скан"
