@@ -150,24 +150,25 @@ object OcrParser {
 
         var i = 0
         while (i < allNums.size - 1) {
-            val xStr = allNums[i].value
-            val yStr = allNums[i + 1].value
-            val x = extractNumber(xStr) ?: run { i++; continue }
-            val y = extractNumber(yStr) ?: run { i++; continue }
+            val x = extractNumber(allNums[i].value)
+            val y = extractNumber(allNums[i + 1].value)
 
-            if (isValidSk42X(x) && isValidSk42Y(y)) {
-                val zone = extractZone(y) ?: run { i++; continue }
-
-                // Пытаемся найти имя перед первым числом
-                val before = text.substring(maxOf(0, allNums[i].range.first - 20), allNums[i].range.first).trim()
-                val name = before.split(Regex("""\s+""")).lastOrNull { it.isNotEmpty() && it[0].isLetter() } ?: "Точка"
-
-                Log.d(TAG, "Raw pair: name=$name x=$x y=$y zone=$zone")
-                results.add(ParsedCoord(name, x, y, zone))
-                i += 2
-            } else {
-                i++
+            if (x != null && y != null && isValidSk42X(x) && isValidSk42Y(y)) {
+                val zone = extractZone(y)
+                if (zone != null) {
+                    val before = text.substring(
+                        maxOf(0, allNums[i].range.first - 20),
+                        allNums[i].range.first
+                    ).trim()
+                    val name = before.split(Regex("""\s+"""))
+                        .lastOrNull { it.isNotEmpty() && it[0].isLetter() } ?: "Точка"
+                    Log.d(TAG, "Raw pair: name=$name x=$x y=$y zone=$zone")
+                    results.add(ParsedCoord(name, x, y, zone))
+                    i += 2
+                    continue
+                }
             }
+            i++
         }
 
         return results
