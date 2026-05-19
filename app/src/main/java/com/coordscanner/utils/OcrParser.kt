@@ -16,208 +16,198 @@ data class ParsedCoord(
 object OcrParser {
     private const val TAG = "OcrParser"
 
-    // ── Быстрая проверка: есть ли в тексте что-то похожее на координаты ──
+    // ── Быстрая проверка для overlay-подсветки ──────────────────
     fun hasCoordinatePattern(text: String): Boolean {
-        val clean = cleanOcr(text)
-        return containsSk42Numbers(clean) ||
-               containsDegrees(clean) ||
-               containsXYLabel(clean)
+        return Regex("""\d{7,}""").containsMatchIn(text) ||              // 7+ цифр подряд
+               Regex("""[XxХх]\s*[=:]""").containsMatchIn(text) ||       // X= или X:
+               Regex("""\d\s*[°*]\s*\d""").containsMatchIn(text) ||      // градусы
+               Regex("""\d[\d ]{4,}\d\s+\d[\d ]{5,}\d""").containsMatchIn(text) // два больших числа
     }
 
-    // ── Главный метод парсинга ──
-    fun parseText(text: String): List<ParsedCoord> {
-        val clean = cleanOcr(text)
+    // ── Главный метод ────────────────────────────────────────────
+    fun parseText(rawText: String): List<ParsedCoord> {
+        val text = fixOcrNoise(rawText)
         val results = mutableListOf<ParsedCoord>()
 
-        results += parseDegrees(clean)          // WGS-84 градусы
-        results += parseLabeledXY(clean)        // X = ... Y = ...
-        results += parseTableRows(clean)        // табличные строки
-        results += parseRawNumberPairs(clean)   // два числа подряд без меток
+        results += parseDegrees(text)
+        results += parseLabeledXY(text)
+        results += parseLines(text)
 
-        // убираем дубли по координатам
         return results.distinctBy { "${it.x.toLong()}_${it.y.toLong()}_${it.isWgs84}" }
     }
 
-    // ───────────────────────────────────────────────
-    //  Очистка OCR-артефактов
-    // ───────────────────────────────────────────────
-    private fun cleanOcr(text: String): String {
-        return text
-            .replace("О", "0").replace("о", "0")   // кириллическая О → 0
-            .replace("l", "1").replace("I", "1")    // строчная l → 1
-            .replace(",", ".")
-    }
-
-    // ───────────────────────────────────────────────
-    //  Вспомогательные проверки
-    // ───────────────────────────────────────────────
-    private fun containsSk42Numbers(text: String): Boolean {
-        // Ищем 7-8 значные числа (типичные для СК-42)
-        return Regex("""\b\d[\d\s]{5,9}\b""").containsMatchIn(text)
-    }
-
-    private fun containsDegrees(text: String): Boolean {
-        return Regex("""\d{1,3}[°oO]\s*\d{1,2}""").containsMatchIn(text)
-    }
-
-    private fun containsXYLabel(text: String): Boolean {
-        return Regex("""[XxХх]\s*[=:]\s*\d""").containsMatchIn(text) ||
-               Regex("""[YyУу]\s*[=:]\s*\d""").containsMatchIn(text)
-    }
-
-    // ───────────────────────────────────────────────
-    //  Извлечь число из строки (убираем пробелы внутри числа)
-    // ───────────────────────────────────────────────
-    private fun extractNumber(s: String): Double? {
-        // "5 632 145.23" → "5632145.23"
-        return s.replace(Regex("""\s"""), "").replace(",", ".").toDoubleOrNull()
-    }
-
-    // ───────────────────────────────────────────────
-    //  Парсинг: X = VALUE  Y = VALUE  (русские и латинские буквы)
-    // ───────────────────────────────────────────────
-    private fun parseLabeledXY(text: String): List<ParsedCoord> {
-        val results = mutableListOf<ParsedCoord>()
-
-        // Находим все упоминания X= и Y= в тексте (могут быть на разных строках)
-        val xPattern = Regex("""[XxХх]\s*[=:]\s*([\d\s.]{6,15})""")
-        val yPattern = Regex("""[YyУу]\s*[=:]\s*([\d\s.]{6,16})""")
-
-        val xMatches = xPattern.findAll(text).toList()
-        val yMatches = yPattern.findAll(text).toList()
-
-        // Пробуем скомбинировать X и Y пары
-        for (xm in xMatches) {
-            // Ищем ближайший Y после этого X
-            val xEnd = xm.range.last
-            val ym = yMatches.firstOrNull { it.range.first > xEnd - 50 } ?: continue
-
-            val x = extractNumber(xm.groupValues[1]) ?: continue
-            val y = extractNumber(ym.groupValues[1]) ?: continue
-
-            if (!isValidSk42X(x) || !isValidSk42Y(y)) continue
-            val zone = extractZone(y) ?: continue
-
-            // Пытаемся найти имя точки перед X=
-            val nameBefore = text.substring(maxOf(0, xm.range.first - 30), xm.range.first)
-                .trim().split(Regex("""\s+""")).lastOrNull { it.length > 1 && it.all { c -> c.isLetterOrDigit() || c == '_' || c == '-' } }
-                ?: "Точка"
-
-            Log.d(TAG, "Labeled: name=$nameBefore x=$x y=$y zone=$zone")
-            results.add(ParsedCoord(nameBefore, x, y, zone))
-        }
-
-        return results
-    }
-
-    // ───────────────────────────────────────────────
-    //  Парсинг: табличные строки  ИМЯ  X  Y
-    // ───────────────────────────────────────────────
-    private fun parseTableRows(text: String): List<ParsedCoord> {
-        val results = mutableListOf<ParsedCoord>()
-
-        for (line in text.lines()) {
-            val tokens = line.trim().split(Regex("""\s{2,}|\t"""))
-            if (tokens.size < 3) continue
-
-            // Перебираем варианты: какие два токена — X и Y
-            for (i in 1 until tokens.size - 1) {
-                val x = extractNumber(tokens[i]) ?: continue
-                val y = extractNumber(tokens[i + 1]) ?: continue
-
-                if (!isValidSk42X(x) || !isValidSk42Y(y)) continue
-                val zone = extractZone(y) ?: continue
-
-                val name = tokens.subList(0, i).joinToString(" ").trim().ifEmpty { "Точка" }
-                Log.d(TAG, "Table: name=$name x=$x y=$y zone=$zone")
-                results.add(ParsedCoord(name, x, y, zone))
-                break
-            }
-        }
-
-        return results
-    }
-
-    // ───────────────────────────────────────────────
-    //  Парсинг: два числа подряд без меток (последний resort)
-    // ───────────────────────────────────────────────
-    private fun parseRawNumberPairs(text: String): List<ParsedCoord> {
-        val results = mutableListOf<ParsedCoord>()
-
-        // Ищем пары чисел: 7 цифр + 8 цифр (с возможными пробелами внутри)
-        val numPattern = Regex("""(\d[\d\s]{5,8}\d)""")
-        val allNums = numPattern.findAll(text).toList()
-
+    // ── Исправление OCR-артефактов (осторожно, только цифровой контекст) ──
+    private fun fixOcrNoise(text: String): String {
+        val sb = StringBuilder()
         var i = 0
-        while (i < allNums.size - 1) {
-            val x = extractNumber(allNums[i].value)
-            val y = extractNumber(allNums[i + 1].value)
-
-            if (x != null && y != null && isValidSk42X(x) && isValidSk42Y(y)) {
-                val zone = extractZone(y)
-                if (zone != null) {
-                    val before = text.substring(
-                        maxOf(0, allNums[i].range.first - 20),
-                        allNums[i].range.first
-                    ).trim()
-                    val name = before.split(Regex("""\s+"""))
-                        .lastOrNull { it.isNotEmpty() && it[0].isLetter() } ?: "Точка"
-                    Log.d(TAG, "Raw pair: name=$name x=$x y=$y zone=$zone")
-                    results.add(ParsedCoord(name, x, y, zone))
-                    i += 2
-                    continue
-                }
+        while (i < text.length) {
+            val ch = text[i]
+            // Кириллическая О рядом с цифрой → 0
+            if ((ch == 'О' || ch == 'о') &&
+                ((i > 0 && text[i-1].isDigit()) || (i < text.length-1 && text[i+1].isDigit()))) {
+                sb.append('0')
+            } else {
+                sb.append(ch)
             }
             i++
         }
+        return sb.toString()
+    }
 
+    // ── Извлечь все числа >= 100000 из строки ───────────────────
+    private data class NumToken(val value: Double, val pos: Int)
+
+    private fun extractNumbers(line: String): List<NumToken> {
+        val result = mutableListOf<NumToken>()
+        // Число: цифры с возможными разделителями тысяч (пробел или запятая) и точкой
+        // Примеры: 5632145  5 632 145  5,632,145  5632145.23
+        val re = Regex("""(\d{1,3}(?:[ ,]\d{3})*(?:[.,]\d+)?|\d{4,}(?:[.,]\d+)?)""")
+        for (m in re.findAll(line)) {
+            val raw = m.value
+            val clean = raw.replace(Regex("""[ ,](?=\d{3}\b)"""), "")  // убрать только разделители тысяч
+                          .replace(",", ".")
+            val v = clean.toDoubleOrNull() ?: continue
+            if (v >= 100_000.0) result.add(NumToken(v, m.range.first))
+        }
+        return result
+    }
+
+    // ── Основной парсер строк ────────────────────────────────────
+    // Ищет пары (X, Y) в каждой строке, X = 7 цифр, Y = 8 цифр с префиксом зоны
+    private fun parseLines(text: String): List<ParsedCoord> {
+        val results = mutableListOf<ParsedCoord>()
+
+        for (line in text.lines()) {
+            val trimmed = line.trim()
+            if (trimmed.length < 10) continue
+
+            val nums = extractNumbers(trimmed)
+            if (nums.size < 2) continue
+
+            // Перебираем соседние пары
+            for (i in 0 until nums.size - 1) {
+                val x = nums[i].value
+                val y = nums[i + 1].value
+
+                if (isValidX(x) && isValidY(y)) {
+                    val zone = zoneOf(y) ?: continue
+                    val name = extractName(trimmed, nums[i].pos)
+                    Log.d(TAG, "Line: '$name' x=$x y=$y zone=$zone")
+                    results.add(ParsedCoord(name, x, y, zone))
+                    break
+                }
+            }
+        }
+
+        // Дополнительно: X на одной строке, Y на следующей
+        results += parseMultiLine(text)
         return results
     }
 
-    // ───────────────────────────────────────────────
-    //  Парсинг: градусный формат WGS-84
-    //  55°30'45.67"N  37°15'23.45"E
-    // ───────────────────────────────────────────────
-    private fun parseDegrees(text: String): List<ParsedCoord> {
+    // Обрабатывает случай когда X и Y на разных строках (без меток)
+    private fun parseMultiLine(text: String): List<ParsedCoord> {
+        val results = mutableListOf<ParsedCoord>()
+        val lines = text.lines()
+        for (i in 0 until lines.size - 1) {
+            val numsA = extractNumbers(lines[i])
+            val numsB = extractNumbers(lines[i + 1])
+            if (numsA.isEmpty() || numsB.isEmpty()) continue
+
+            val x = numsA.lastOrNull { isValidX(it.value) }?.value ?: continue
+            val y = numsB.firstOrNull { isValidY(it.value) }?.value ?: continue
+            val zone = zoneOf(y) ?: continue
+
+            val name = extractName(lines[i].trim(), 0)
+            Log.d(TAG, "MultiLine: '$name' x=$x y=$y zone=$zone")
+            results.add(ParsedCoord(name, x, y, zone))
+        }
+        return results
+    }
+
+    // ── X=... Y=... (метки) ──────────────────────────────────────
+    private fun parseLabeledXY(text: String): List<ParsedCoord> {
         val results = mutableListOf<ParsedCoord>()
 
-        val deg = Regex(
-            """(\d{1,3})\s*[°oO*]\s*(\d{1,2})\s*['`']\s*([\d.]+)\s*[""]?\s*([NnСсSs])\D{0,5}""" +
-            """(\d{1,3})\s*[°oO*]\s*(\d{1,2})\s*['`']\s*([\d.]+)\s*[""]?\s*([EeВвEеЕе])"""
-        )
+        // Ищем X= и Y= (латинские и кириллические)
+        val xRe = Regex("""[XxХх]\s*[=:]\s*([\d ,.]{5,16})""")
+        val yRe = Regex("""[YyУу]\s*[=:]\s*([\d ,.]{6,17})""")
 
-        for (m in deg.findAll(text)) {
+        val xs = xRe.findAll(text).toList()
+        val ys = yRe.findAll(text).toList()
+
+        for (xm in xs) {
+            val x = parseNumStr(xm.groupValues[1]) ?: continue
+            if (!isValidX(x)) continue
+
+            // Ближайший Y после X (или до X не дальше 100 символов)
+            val ym = ys.minByOrNull { Math.abs(it.range.first - xm.range.last) } ?: continue
+            val y = parseNumStr(ym.groupValues[1]) ?: continue
+            if (!isValidY(y)) continue
+            val zone = zoneOf(y) ?: continue
+
+            val name = text.substring(maxOf(0, xm.range.first - 40), xm.range.first)
+                .trim().split(Regex("""\s+"""))
+                .lastOrNull { it.any { c -> c.isLetter() } } ?: "Точка"
+
+            Log.d(TAG, "Labeled: '$name' x=$x y=$y zone=$zone")
+            results.add(ParsedCoord(name, x, y, zone))
+        }
+        return results
+    }
+
+    // ── Градусы WGS-84: 55°30'45"N 37°15'23"E ───────────────────
+    private fun parseDegrees(text: String): List<ParsedCoord> {
+        val results = mutableListOf<ParsedCoord>()
+        // Гибкий паттерн: допускает разные символы для °, ', "
+        val degRe = Regex(
+            """(\d{1,3})\s*[°oO]\s*(\d{1,2})\s*['`]\s*([\d.]+)[^NSEW]{0,3}([NSns])""" +
+            """\D{0,10}""" +
+            """(\d{1,3})\s*[°oO]\s*(\d{1,2})\s*['`]\s*([\d.]+)[^NSEW]{0,3}([EWew])"""
+        )
+        for (m in degRe.findAll(text)) {
             val lat = dms(m.groupValues[1], m.groupValues[2], m.groupValues[3], m.groupValues[4]) ?: continue
             val lon = dms(m.groupValues[5], m.groupValues[6], m.groupValues[7], m.groupValues[8]) ?: continue
             if (lat !in -90.0..90.0 || lon !in -180.0..180.0) continue
-            Log.d(TAG, "Degrees: lat=$lat lon=$lon")
             results.add(ParsedCoord("Точка", 0.0, 0.0, 0, isWgs84 = true, lat = lat, lon = lon, system = "WGS-84"))
         }
-
         return results
     }
 
-    private fun dms(degStr: String, minStr: String, secStr: String, hem: String): Double? {
-        val d = degStr.toDoubleOrNull() ?: return null
-        val m = minStr.toDoubleOrNull() ?: return null
-        val s = secStr.toDoubleOrNull() ?: return null
-        var v = d + m / 60.0 + s / 3600.0
-        if (hem.uppercase() in listOf("S", "Ю", "W", "З")) v = -v
+    // ── Вспомогательные ─────────────────────────────────────────
+
+    private fun parseNumStr(s: String): Double? {
+        return s.trim()
+            .replace(Regex("""[ ,](?=\d{3})"""), "")
+            .replace(",", ".")
+            .toDoubleOrNull()
+    }
+
+    private fun extractName(line: String, xPos: Int): String {
+        val before = if (xPos > 0) line.substring(0, xPos).trim() else line
+        return before.split(Regex("""\s+"""))
+            .filter { it.isNotEmpty() && it.any { c -> c.isLetter() } }
+            .lastOrNull()
+            ?: before.split(Regex("""\s+""")).firstOrNull { it.isNotEmpty() }
+            ?: "Точка"
+    }
+
+    private fun dms(d: String, m: String, s: String, hem: String): Double? {
+        val dv = d.toDoubleOrNull() ?: return null
+        val mv = m.toDoubleOrNull() ?: return null
+        val sv = s.toDoubleOrNull() ?: return null
+        var v = dv + mv / 60.0 + sv / 3600.0
+        if (hem.uppercase() in listOf("S", "W")) v = -v
         return v
     }
 
-    // ───────────────────────────────────────────────
-    //  Валидация и зона
-    // ───────────────────────────────────────────────
+    // СК-42 X: 7 цифр, 1 000 000 — 9 999 999
+    private fun isValidX(v: Double) = v in 1_000_000.0..9_999_999.0
 
-    // СК-42 X (northing): 1 000 000 — 9 999 999 метров
-    private fun isValidSk42X(x: Double) = x in 1_000_000.0..9_999_999.0
+    // СК-42 Y с префиксом зоны: 8 цифр, 1 000 000 — 32 999 999
+    private fun isValidY(v: Double) = v in 1_000_000.0..32_999_999.0
 
-    // СК-42 Y с префиксом зоны: 1_000_000 — 32_999_999
-    private fun isValidSk42Y(y: Double) = y in 1_000_000.0..32_999_999.0
-
-    private fun extractZone(y: Double): Int? {
-        val prefix = (y / 1_000_000).toInt()
-        return if (prefix in 1..32) prefix else null
+    private fun zoneOf(y: Double): Int? {
+        val z = (y / 1_000_000).toInt()
+        return if (z in 1..32) z else null
     }
 }
