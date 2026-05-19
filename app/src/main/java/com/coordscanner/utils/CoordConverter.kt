@@ -4,131 +4,108 @@ import kotlin.math.*
 
 object CoordConverter {
 
-    // Krassovsky 1940 ellipsoid
-    private const val A = 6378245.0
-    private const val F = 1.0 / 298.3
-    private const val E2 = 2 * F - F * F   // 0.006693421522
+    // Krassovsky 1940 ellipsoid (SK-42)
+    private const val A   = 6378245.0          // semi-major axis, m
+    private const val E2  = 0.006693421522     // first eccentricity²
+    private const val F   = 1.0 / 298.3        // flattening
 
-    // WGS84 ellipsoid
-    private const val A_WGS = 6378137.0
-    private const val F_WGS = 1.0 / 298.257223563
+    // WGS-84 ellipsoid
+    private const val A84 = 6378137.0
+    private const val F84 = 1.0 / 298.257223563
 
-    // Datum shift Pulkovo 1942 -> WGS84 (standard for FSU/Russia, 3-parameter Molodensky)
+    // Molodensky shift: Pulkovo 1942 → WGS-84 (EPSG:1258, Russia general)
     private const val DX = 25.0
     private const val DY = -141.0
     private const val DZ = -79.0
 
     /**
-     * Convert SK-42 (Gauss-Kruger) X/Y with zone to WGS84 lat/lon in decimal degrees.
+     * SK-42 Gauss-Kruger (X, Y with zone prefix) → WGS-84 (lat, lon) decimal degrees.
      */
     fun sk42ToWgs84(x: Double, y: Double, zone: Int): Pair<Double, Double> {
         val (lat42, lon42) = gaussKrugerToGeographic(x, y, zone)
-        return pulkovoToWgs84(lat42, lon42)
+        return molodenskyPulkovoToWgs84(lat42, lon42)
     }
 
     /**
-     * Gauss-Kruger (Krassovsky) X/Y -> geographic lat/lon in Pulkovo 1942 (decimal degrees).
+     * Inverse Gauss-Kruger: SK-42 X/Y → geographic (Pulkovo 1942), decimal degrees.
+     * Uses Newton-Raphson iteration to find the footprint latitude exactly.
      */
     fun gaussKrugerToGeographic(x: Double, y: Double, zone: Int): Pair<Double, Double> {
-        val a = A
-        val e2 = E2
+        val e2 = E2; val e4 = e2 * e2; val e6 = e4 * e2
 
-        // Central meridian for this zone
-        val l0Deg = 6.0 * zone - 3.0
-        val l0 = Math.toRadians(l0Deg)
+        // Central meridian and strip-centred easting
+        val l0 = toRadians(6.0 * zone - 3.0)
+        val y0 = y - zone * 1_000_000.0 - 500_000.0   // easting from CM
 
-        // Strip zone prefix and false easting from Y
-        val y0 = y - zone * 1_000_000.0 - 500_000.0
+        // Meridional arc forward-series coefficients (Helmert)
+        val C0 = 1.0 - e2 / 4 - 3 * e4 / 64 - 5 * e6 / 256
+        val C2 = 3.0 / 8   * (e2 + e4 / 4   + 15 * e6 / 128)
+        val C4 = 15.0 / 256 * (e4 + 3 * e6 / 4)
+        val C6 = 35.0 / 3072 * e6
 
-        // Iterative computation of footprint latitude B0 from meridional arc X
-        // Meridional arc series coefficients (Krassovsky)
-        val e4 = e2 * e2
-        val e6 = e4 * e2
-        val e8 = e4 * e4
+        // Iterative Newton-Raphson: find B₀ such that M(B₀) = X
+        var B = x / (A * C0)                           // initial guess
+        repeat(10) {
+            val M  = A * (C0 * B - C2 * sin(2 * B) + C4 * sin(4 * B) - C6 * sin(6 * B))
+            val dM = A * (C0 - 2 * C2 * cos(2 * B) + 4 * C4 * cos(4 * B) - 6 * C6 * cos(6 * B))
+            B -= (M - x) / dM
+        }
 
-        // Meridional arc length per unit radian (at equator)
-        val c0 = a * (1 - e2) * (1.0 + 3.0/4*e2 + 45.0/64*e4 + 175.0/256*e6 + 11025.0/16384*e8)
+        // Radii of curvature at footprint latitude
+        val sinB = sin(B); val cosB = cos(B); val tanB = tan(B)
+        val W  = sqrt(1 - e2 * sinB * sinB)
+        val N  = A / W                               // prime-vertical radius
+        val Mc = A * (1 - e2) / (W * W * W)         // meridional radius
+        val n2 = e2 / (1 - e2) * cosB * cosB        // second eccentricity²
+        val t  = tanB;  val t2 = t * t;  val t4 = t2 * t2
 
-        // Coefficients for B0 series inversion
-        val c2 = 3.0/8*e2 + 15.0/32*e4 + 525.0/1024*e6 + 2205.0/4096*e8
-        val c4 = 15.0/256*e4 + 105.0/1024*e6 + 2205.0/16384*e8
-        val c6 = 35.0/3072*e6 + 315.0/12288*e8
-        val c8 = 315.0/131072*e8
+        // Dimensionless easting
+        val q = y0 / N
+        val q2 = q * q;  val q4 = q2 * q2
 
-        val b0arg = x / c0
-        val b0 = b0arg +
-                c2 * sin(2 * b0arg) +
-                c4 * sin(4 * b0arg) +
-                c6 * sin(6 * b0arg) +
-                c8 * sin(8 * b0arg)
+        // Latitude correction (Kruger series)
+        val lat = B - (t * N / Mc) * (q2 / 2) *
+            (1.0 - q2 / 12 * (5 + 3 * t2 + n2 - 9 * n2 * t2 - 4 * n2 * n2)
+                 + q4 / 360 * (61 + 90 * t2 + 45 * t4))
 
-        val sinB0 = sin(b0)
-        val cosB0 = cos(b0)
-        val tanB0 = tan(b0)
+        // Longitude correction
+        val lon = l0 + (q / cosB) *
+            (1.0 - q2 / 6   * (1 + 2 * t2 + n2)
+                 + q4 / 120 * (5 + 28 * t2 + 24 * t4 + 6 * n2 + 8 * n2 * t2))
 
-        val W0 = sqrt(1 - e2 * sinB0 * sinB0)
-        val N0 = a / W0                          // prime vertical radius
-        val M0 = a * (1 - e2) / (W0 * W0 * W0)  // meridional radius
-        val eta2 = e2 / (1 - e2) * cosB0 * cosB0
-
-        val t = tanB0
-        val t2 = t * t
-        val t4 = t2 * t2
-
-        val y02 = y0 * y0
-        val N02 = N0 * N0
-        val N04 = N02 * N02
-
-        // Latitude (series expansion)
-        val latRad = b0 -
-                t / (2 * M0 * N0) * y02 * (
-                        1 - y02 / (12 * N02) * (5 + 3*t2 + eta2 - 9*eta2*t2 - 4*eta2*eta2) +
-                        y02*y02 / (360 * N04) * (61 + 90*t2 + 45*t4)
-                )
-
-        // Longitude (series expansion)
-        val lonRad = l0 +
-                y0 / (N0 * cosB0) * (
-                        1 - y02 / (6 * N02) * (1 + 2*t2 + eta2) +
-                        y02*y02 / (120 * N04) * (5 + 28*t2 + 24*t4 + 6*eta2 + 8*eta2*t2)
-                )
-
-        return Pair(Math.toDegrees(latRad), Math.toDegrees(lonRad))
+        return Pair(toDegrees(lat), toDegrees(lon))
     }
 
     /**
-     * Abridged Molodensky: Pulkovo 1942 (Krassovsky) -> WGS84, decimal degrees.
+     * Abridged Molodensky datum shift: Pulkovo 1942 → WGS-84, decimal degrees.
      */
-    fun pulkovoToWgs84(latDeg: Double, lonDeg: Double): Pair<Double, Double> {
-        val phi = Math.toRadians(latDeg)
-        val lam = Math.toRadians(lonDeg)
+    fun molodenskyPulkovoToWgs84(latDeg: Double, lonDeg: Double): Pair<Double, Double> {
+        val phi = toRadians(latDeg)
+        val lam = toRadians(lonDeg)
 
-        val sinPhi = sin(phi)
-        val cosPhi = cos(phi)
-        val sinLam = sin(lam)
-        val cosLam = cos(lam)
+        val sinPhi = sin(phi); val cosPhi = cos(phi)
+        val sinLam = sin(lam); val cosLam = cos(lam)
 
-        val da = A_WGS - A
-        val df = F_WGS - F
-        val e2 = E2
+        val da = A84 - A          // −108 m
+        val df = F84 - F          // ≈ −3.97e-7
 
-        val W = sqrt(1 - e2 * sinPhi * sinPhi)
+        val W = sqrt(1 - E2 * sinPhi * sinPhi)
         val N = A / W
-        val M = A * (1 - e2) / (W * W * W)
+        val M = A * (1 - E2) / (W * W * W)
 
-        // Abridged Molodensky formulas (height assumed 0)
         val dPhi = ((-DX * sinPhi * cosLam - DY * sinPhi * sinLam + DZ * cosPhi) +
-                (A * df + F * da) * sin(2 * phi)) / (M)
+                   (A * df + F * da) * sin(2 * phi)) / M
 
         val dLam = (-DX * sinLam + DY * cosLam) / (N * cosPhi)
 
-        val latWgs = latDeg + Math.toDegrees(dPhi)
-        val lonWgs = lonDeg + Math.toDegrees(dLam)
-
-        return Pair(latWgs, lonWgs)
+        return Pair(latDeg + toDegrees(dPhi), lonDeg + toDegrees(dLam))
     }
 
-    // ---- Formatting helpers ----
+    // Legacy alias
+    fun pulkovoToWgs84(latDeg: Double, lonDeg: Double) =
+        molodenskyPulkovoToWgs84(latDeg, lonDeg)
+
+    // ── Display helpers ──────────────────────────────────────
 
     fun decimalToDms(decimal: Double): String {
         val abs = abs(decimal)

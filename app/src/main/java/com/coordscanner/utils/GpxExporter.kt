@@ -43,7 +43,7 @@ object GpxExporter {
                 appendLine("""  <wpt lat="$lat" lon="$lon">""")
                 appendLine("    <name>$name</name>")
                 appendLine("    <desc>${escapeXml(desc)}</desc>")
-                appendLine("    <sym>Flag, Blue</sym>")
+                appendLine("    <sym>Circle</sym>")
                 appendLine("    <type>Waypoint</type>")
                 appendLine("    <extensions>")
                 appendLine("      <color>${p.color}</color>")
