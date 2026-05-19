@@ -20,13 +20,6 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Show pre-installed Android SDK info
-        run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          ls $ANDROID_SDK_ROOT/platforms/ 2>/dev/null || true
-          ls $ANDROID_SDK_ROOT/build-tools/ 2>/dev/null || true
-
       - name: Install Android SDK platform 34
         run: |
           yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
@@ -41,16 +34,19 @@ jobs:
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-          export GRADLE_BIN=/tmp/gradle-dist/gradle-8.6/bin/gradle
-          $GRADLE_BIN wrapper --gradle-version 8.6
+          /tmp/gradle-dist/gradle-8.6/bin/gradle wrapper --gradle-version 8.6
           chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --info 2>&1 | tail -100
+        run: ./gradlew assembleDebug
+
+      - name: Find APK
+        run: find . -name "*.apk" -type f
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CoordScanner-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 30
