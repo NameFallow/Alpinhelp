@@ -39,6 +39,8 @@ object OcrParser {
         results += parseDegrees(rawText)
         results += parseLabeledXY(rawText)
         results += parseLines(rawText)
+        // Column-format fallback: all X values first, then all Y values
+        if (results.none { !it.isWgs84 }) results += parseColumnBlocks(rawText)
         val unique = results.distinctBy { "${it.x.toLong()}_${it.y.toLong()}_${it.isWgs84}" }
         Log.d(TAG, "Parsed ${unique.size} points")
         return unique
@@ -119,6 +121,11 @@ object OcrParser {
                 val y = nextNums.firstOrNull { isValidY(it.value) }?.value
                 if (x != null && y != null) {
                     val zone = zoneOf(y) ?: continue
+                    // Skip if X and potential-Y have the same leading million digit AND
+                    // are close in value — likely two consecutive X values from a column,
+                    // not an X-Y pair from different columns
+                    val sameLeading = (x / 1_000_000).toInt() == (y / 1_000_000).toInt()
+                    if (sameLeading && Math.abs(x - y) < 500_000) continue
                     val name = nameOnLine(line, 0)
                         .ifEmpty { nameFromPrevLine(lines, idx) }
                     Log.d(TAG, "MultiLine: '$name' x=$x y=$y zone=$zone")
@@ -127,6 +134,41 @@ object OcrParser {
             }
         }
         return results
+    }
+
+    // ── Column-format: all X values first, then all Y values ─
+    // OCR sometimes reads a 2-column table column-by-column instead of row-by-row.
+    // Detects: N numbers that are valid X followed by exactly N numbers that are valid Y.
+    private fun parseColumnBlocks(text: String): List<ParsedCoord> {
+        // Collect every large number from the whole text in document order
+        val allNums = mutableListOf<Double>()
+        for (line in text.lines()) {
+            extractNumbers(line).forEach { allNums.add(it.value) }
+        }
+
+        val n = allNums.size
+        if (n < 4 || n % 2 != 0) return emptyList()
+
+        val half = n / 2
+        val xCands = allNums.subList(0, half)
+        val yCands = allNums.subList(half, n)
+
+        if (!xCands.all { isValidX(it) }) return emptyList()
+        if (!yCands.all { isValidY(it) }) return emptyList()
+
+        // All Y must share the same zone
+        val zones = yCands.map { zoneOf(it) ?: return emptyList() }
+        val zone = zones[0]
+        if (!zones.all { it == zone }) return emptyList()
+
+        // The two groups must be meaningfully different in magnitude —
+        // if they're similar it's likely a single column of X values, not X+Y
+        if (Math.abs(xCands.average() - yCands.average()) < 300_000.0) return emptyList()
+
+        Log.d(TAG, "ColumnBlocks: $half pairs, zone=$zone")
+        return xCands.zip(yCands).mapIndexed { i, (x, y) ->
+            ParsedCoord("Точка ${i + 1}", x, y, zone)
+        }
     }
 
     // ── Degrees WGS-84 ───────────────────────────────────────
