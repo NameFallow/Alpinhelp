@@ -3,12 +3,15 @@ package com.coordscanner
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.net.Uri
 import android.os.*
 import android.util.Log
 import android.util.Size
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -29,6 +32,7 @@ import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -38,11 +42,12 @@ import java.util.concurrent.atomic.AtomicLong
 @OptIn(androidx.camera.core.ExperimentalGetImage::class)
 class ScanActivity : AppCompatActivity() {
 
+    private enum class ScanMode { SK42, WGS84 }
+
     companion object {
         private const val TAG = "ScanActivity"
         private const val DEDUP_TIMEOUT_MS = 15_000L
         private const val MIN_FRAME_INTERVAL_MS = 500L
-        // Number of consecutive frames with same coord before confirming
         private const val REQUIRED_FRAMES = 3
     }
 
@@ -50,6 +55,14 @@ class ScanActivity : AppCompatActivity() {
     private val viewModel: PointViewModel by viewModels()
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val cameraExecutor = Executors.newSingleThreadExecutor()
+
+    private var camera: Camera? = null
+    private lateinit var imageCapture: ImageCapture
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> uri?.let { processImageUri(it) } }
 
     private val recentDetections = ConcurrentHashMap<String, Long>()
     private val lastFrameTime = AtomicLong(0L)
@@ -63,6 +76,8 @@ class ScanActivity : AppCompatActivity() {
     // Confirmation state
     @Volatile private var confirmationShowing = false
     private var pendingPoint: ParsedCoord? = null
+
+    private var scanMode = ScanMode.SK42
 
     // Selected color for the point
     private var selectedColor = "#0055FF"
@@ -107,6 +122,11 @@ class ScanActivity : AppCompatActivity() {
         }
 
         setupColorPicker()
+        setupModeToggle()
+        setupZoom()
+
+        binding.btnCapture.setOnClickListener { takePhoto() }
+        binding.btnGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
 
         binding.btnSave.setOnClickListener {
             val p = pendingPoint ?: return@setOnClickListener
@@ -128,6 +148,17 @@ class ScanActivity : AppCompatActivity() {
             == PackageManager.PERMISSION_GRANTED
         ) startCamera()
         else requestPermission.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun setupModeToggle() {
+        binding.toggleCoordsMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                scanMode = if (checkedId == R.id.btnModeSk42) ScanMode.SK42 else ScanMode.WGS84
+                resetCandidate()
+                recentDetections.clear()
+                binding.tvStatus.text = "Наведите на координаты"
+            }
+        }
     }
 
     private fun setupColorPicker() {
@@ -161,11 +192,16 @@ class ScanActivity : AppCompatActivity() {
                 .build()
                 .also { it.setAnalyzer(cameraExecutor, ::analyzeFrame) }
 
+            imageCapture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build()
+
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
+                camera = cameraProvider.bindToLifecycle(
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis, imageCapture
                 )
+                camera?.cameraInfo?.zoomState?.observe(this) { updateZoomLabel() }
             } catch (e: Exception) {
                 Log.e(TAG, "Camera bind failed", e)
             }
@@ -230,12 +266,14 @@ class ScanActivity : AppCompatActivity() {
     private fun processStability(rawText: String, now: Long) {
         val parsed = OcrParser.parseText(rawText)
 
-        // Find the first coordinate that hasn't been recently saved
-        val newPoint = parsed.firstOrNull { p ->
-            val k = makeKey(p)
-            val lastSeen = recentDetections[k]
-            lastSeen == null || now - lastSeen > DEDUP_TIMEOUT_MS
-        }
+        // Filter by selected coordinate system, then deduplicate
+        val newPoint = parsed
+            .filter { p -> if (scanMode == ScanMode.SK42) !p.isWgs84 else p.isWgs84 }
+            .firstOrNull { p ->
+                val k = makeKey(p)
+                val lastSeen = recentDetections[k]
+                lastSeen == null || now - lastSeen > DEDUP_TIMEOUT_MS
+            }
 
         when {
             newPoint == null -> {
@@ -399,6 +437,95 @@ class ScanActivity : AppCompatActivity() {
             tone.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
             Handler(Looper.getMainLooper()).postDelayed({ tone.release() }, 300)
         } catch (_: Exception) {}
+    }
+
+    // ── Zoom ─────────────────────────────────────────────────
+
+    private fun setupZoom() {
+        scaleGestureDetector = ScaleGestureDetector(this,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    val cam = camera ?: return true
+                    val state = cam.cameraInfo.zoomState.value ?: return true
+                    val newZoom = (state.zoomRatio * detector.scaleFactor)
+                        .coerceIn(state.minZoomRatio, state.maxZoomRatio)
+                    cam.cameraControl.setZoomRatio(newZoom)
+                    return true
+                }
+            })
+        binding.viewFinder.setOnTouchListener { v, event ->
+            scaleGestureDetector.onTouchEvent(event)
+            v.performClick()
+            true
+        }
+        binding.btnZoomIn.setOnClickListener { adjustZoom(1.4f) }
+        binding.btnZoomOut.setOnClickListener { adjustZoom(1f / 1.4f) }
+    }
+
+    private fun adjustZoom(factor: Float) {
+        val cam = camera ?: return
+        val state = cam.cameraInfo.zoomState.value ?: return
+        val newZoom = (state.zoomRatio * factor).coerceIn(state.minZoomRatio, state.maxZoomRatio)
+        cam.cameraControl.setZoomRatio(newZoom)
+    }
+
+    private fun updateZoomLabel() {
+        val zoom = camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: 1f
+        binding.tvZoomLevel.text = "%.1f×".format(zoom)
+    }
+
+    // ── Photo capture ─────────────────────────────────────────
+
+    private fun takePhoto() {
+        val photoFile = File(cacheDir, "coord_${System.currentTimeMillis()}.jpg")
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    val bmp = BitmapFactory.decodeFile(photoFile.absolutePath) ?: return
+                    processImage(InputImage.fromBitmap(bmp, 0))
+                }
+                override fun onError(exc: ImageCaptureException) {
+                    Toast.makeText(this@ScanActivity, "Ошибка съёмки", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    // ── Gallery / URI processing ──────────────────────────────
+
+    private fun processImageUri(uri: Uri) {
+        try {
+            processImage(InputImage.fromFilePath(this, uri))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun processImage(image: InputImage) {
+        recognizer.process(image)
+            .addOnSuccessListener { visionText ->
+                val rawText = visionText.text
+                runOnUiThread {
+                    if (debugVisible) binding.tvDebugOcr.text = rawText
+                }
+                val parsed = OcrParser.parseText(rawText)
+                    .filter { p -> if (scanMode == ScanMode.SK42) !p.isWgs84 else p.isWgs84 }
+                runOnUiThread {
+                    if (parsed.isNotEmpty() && !confirmationShowing) {
+                        showConfirmation(parsed.first())
+                    } else if (parsed.isEmpty()) {
+                        Toast.makeText(this, "Координаты не найдены", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .addOnFailureListener {
+                runOnUiThread {
+                    Toast.makeText(this, "Ошибка распознавания", Toast.LENGTH_SHORT).show()
+                }
+            }
     }
 
     override fun onDestroy() {

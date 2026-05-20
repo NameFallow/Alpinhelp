@@ -9,6 +9,7 @@ import java.io.File
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Locale
 
 object GpxExporter {
 
@@ -34,16 +35,15 @@ object GpxExporter {
             appendLine("  <metadata><time>$now</time></metadata>")
 
             for (p in points) {
-                val lat = "%.8f".format(p.latWgs84)
-                val lon = "%.8f".format(p.lonWgs84)
-                val name = escapeXml(p.name)
-                val desc = if (p.xSk42 != 0.0)
-                    "X: ${p.xSk42.toLong()}  Y: ${p.ySk42.toLong()}  зона ${p.zone}"
+                val (wgsLat, wgsLon) = if (p.xSk42 != 0.0)
+                    CoordConverter.sk42ToWgs84(p.xSk42, p.ySk42, p.zone)
                 else
-                    "WGS-84: %.5f N  %.5f E".format(p.latWgs84, p.lonWgs84)
+                    Pair(p.latWgs84, p.lonWgs84)
+                val lat = "%.8f".format(wgsLat)
+                val lon = "%.8f".format(wgsLon)
+                val name = escapeXml(p.name)
                 appendLine("""  <wpt lat="$lat" lon="$lon">""")
                 appendLine("    <name>$name</name>")
-                appendLine("    <desc>${escapeXml(desc)}</desc>")
                 appendLine("    <sym>Circle</sym>")
                 appendLine("    <type>Waypoint</type>")
                 appendLine("    <extensions>")
@@ -82,9 +82,13 @@ object GpxExporter {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        // Try ACTION_VIEW first (AlpesQuest handles it), fallback to chooser
-        val chooser = Intent.createChooser(intent, "Открыть в...")
-        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(chooser)
+        // Open directly if only one app handles GPX (e.g. AlpesQuest), else show chooser
+        try {
+            context.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            val chooser = Intent.createChooser(intent, "Открыть в...")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        }
     }
 }
