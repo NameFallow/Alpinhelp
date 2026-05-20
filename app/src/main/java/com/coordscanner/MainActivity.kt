@@ -51,6 +51,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ScanActivity::class.java))
         }
 
+        binding.btnPhotoBatch.setOnClickListener {
+            startActivity(Intent(this, PhotoBatchActivity::class.java))
+        }
+
         binding.fab.setOnClickListener {
             startActivity(Intent(this, AddPointActivity::class.java))
         }

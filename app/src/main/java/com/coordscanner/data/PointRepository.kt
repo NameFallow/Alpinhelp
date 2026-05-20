@@ -7,6 +7,7 @@ class PointRepository(private val dao: PointDao) {
     val allPoints: LiveData<List<Point>> = dao.getAllPoints()
 
     suspend fun insert(point: Point) = dao.insert(point)
+    suspend fun insertAll(points: List<Point>) = dao.insertAll(points)
     suspend fun update(point: Point) = dao.update(point)
     suspend fun delete(point: Point) = dao.delete(point)
     suspend fun getById(id: Long) = dao.getById(id)

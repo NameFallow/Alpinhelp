@@ -24,6 +24,10 @@ class PointViewModel(application: Application) : AndroidViewModel(application) {
         repository.insert(point)
     }
 
+    fun insertAll(points: List<Point>) = viewModelScope.launch {
+        repository.insertAll(points)
+    }
+
     fun update(point: Point) = viewModelScope.launch {
         repository.update(point)
     }

@@ -12,6 +12,9 @@ interface PointDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(point: Point): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(points: List<Point>)
+
     @Update
     suspend fun update(point: Point)
 

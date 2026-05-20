@@ -49,10 +49,23 @@
                     android:layout_weight="2"
                     android:layout_marginEnd="8dp"
                     android:text="Сканировать"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:fontFamily="sans-serif-medium"
                     app:backgroundTint="@color/primary"
                     app:iconTint="@color/white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPhotoBatch"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="2"
+                    android:layout_marginEnd="8dp"
+                    android:text="Фото таблицы"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:backgroundTint="@color/navy_surface"
+                    app:strokeColor="@color/primary"
+                    app:strokeWidth="1dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/fab"

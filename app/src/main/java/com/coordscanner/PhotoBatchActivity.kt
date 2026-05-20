@@ -1,0 +1,247 @@
+package com.coordscanner
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Bundle
+import android.util.Log
+import android.view.ScaleGestureDetector
+import android.view.View
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.coordscanner.adapter.CoordResultAdapter
+import com.coordscanner.databinding.ActivityPhotoBatchBinding
+import com.coordscanner.model.Point
+import com.coordscanner.utils.CoordConverter
+import com.coordscanner.utils.OcrParser
+import com.coordscanner.viewmodel.PointViewModel
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.io.File
+import java.util.concurrent.Executors
+
+@OptIn(ExperimentalGetImage::class)
+class PhotoBatchActivity : AppCompatActivity() {
+
+    companion object { private const val TAG = "PhotoBatch" }
+
+    private lateinit var binding: ActivityPhotoBatchBinding
+    private val viewModel: PointViewModel by viewModels()
+    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val cameraExecutor = Executors.newSingleThreadExecutor()
+
+    private var camera: Camera? = null
+    private lateinit var imageCapture: ImageCapture
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
+    private lateinit var adapter: CoordResultAdapter
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> uri?.let { processImageUri(it) } }
+
+    private val requestPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) startCamera()
+        else { Toast.makeText(this, "Нужно разрешение на камеру", Toast.LENGTH_LONG).show(); finish() }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityPhotoBatchBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        adapter = CoordResultAdapter { updateSaveButton() }
+        binding.recyclerResults.layoutManager = LinearLayoutManager(this)
+        binding.recyclerResults.adapter = adapter
+
+        setupZoom()
+
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnCapture.setOnClickListener { takePhoto() }
+        binding.btnGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
+        binding.btnAddMore.setOnClickListener { showCamera() }
+        binding.btnSaveSelected.setOnClickListener { saveSelected() }
+        binding.btnClearResults.setOnClickListener { adapter.clearAll(); showCamera() }
+        binding.checkboxSelectAll.setOnCheckedChangeListener { _, checked ->
+            adapter.selectAll(checked)
+        }
+        binding.btnZoomIn.setOnClickListener { adjustZoom(1.4f) }
+        binding.btnZoomOut.setOnClickListener { adjustZoom(1f / 1.4f) }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+        ) startCamera()
+        else requestPermission.launch(Manifest.permission.CAMERA)
+    }
+
+    // ── Zoom ─────────────────────────────────────────────────
+
+    private fun setupZoom() {
+        scaleGestureDetector = ScaleGestureDetector(this,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    val cam = camera ?: return true
+                    val state = cam.cameraInfo.zoomState.value ?: return true
+                    val newZoom = (state.zoomRatio * detector.scaleFactor)
+                        .coerceIn(state.minZoomRatio, state.maxZoomRatio)
+                    cam.cameraControl.setZoomRatio(newZoom)
+                    return true
+                }
+            })
+        binding.viewFinder.setOnTouchListener { v, event ->
+            scaleGestureDetector.onTouchEvent(event)
+            v.performClick()
+            true
+        }
+    }
+
+    private fun adjustZoom(factor: Float) {
+        val cam = camera ?: return
+        val state = cam.cameraInfo.zoomState.value ?: return
+        val newZoom = (state.zoomRatio * factor).coerceIn(state.minZoomRatio, state.maxZoomRatio)
+        cam.cameraControl.setZoomRatio(newZoom)
+    }
+
+    // ── Camera ────────────────────────────────────────────────
+
+    private fun startCamera() {
+        val future = ProcessCameraProvider.getInstance(this)
+        future.addListener({
+            val provider = future.get()
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+            }
+            imageCapture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                .build()
+            try {
+                provider.unbindAll()
+                camera = provider.bindToLifecycle(
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture
+                )
+                camera?.cameraInfo?.zoomState?.observe(this) {
+                    binding.tvZoomLevel.text = "%.1f×".format(it.zoomRatio)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Camera bind failed", e)
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun showCamera() {
+        binding.cameraContainer.visibility = View.VISIBLE
+        binding.resultsContainer.visibility = View.GONE
+    }
+
+    // ── Photo capture ─────────────────────────────────────────
+
+    private fun takePhoto() {
+        val photoFile = File(cacheDir, "batch_${System.currentTimeMillis()}.jpg")
+        val opts = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        binding.progressBar.visibility = View.VISIBLE
+        imageCapture.takePicture(opts, ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    val bmp = BitmapFactory.decodeFile(photoFile.absolutePath)
+                    if (bmp != null) processImage(InputImage.fromBitmap(bmp, 0))
+                    else {
+                        binding.progressBar.visibility = View.GONE
+                        Toast.makeText(this@PhotoBatchActivity, "Ошибка съёмки", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                override fun onError(exc: ImageCaptureException) {
+                    binding.progressBar.visibility = View.GONE
+                    Toast.makeText(this@PhotoBatchActivity, "Ошибка: ${exc.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+    private fun processImageUri(uri: Uri) {
+        try {
+            binding.progressBar.visibility = View.VISIBLE
+            processImage(InputImage.fromFilePath(this, uri))
+        } catch (e: Exception) {
+            binding.progressBar.visibility = View.GONE
+            Toast.makeText(this, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun processImage(image: InputImage) {
+        recognizer.process(image)
+            .addOnSuccessListener { visionText ->
+                val parsed = OcrParser.parseText(visionText.text)
+                runOnUiThread {
+                    binding.progressBar.visibility = View.GONE
+                    if (parsed.isNotEmpty()) {
+                        adapter.addAll(parsed)
+                        showResults()
+                        Toast.makeText(this, "Найдено: ${parsed.size} координат", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Координаты не найдены — попробуйте ближе или другой угол", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .addOnFailureListener {
+                runOnUiThread {
+                    binding.progressBar.visibility = View.GONE
+                    Toast.makeText(this, "Ошибка распознавания", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    // ── Results ───────────────────────────────────────────────
+
+    private fun showResults() {
+        binding.cameraContainer.visibility = View.GONE
+        binding.resultsContainer.visibility = View.VISIBLE
+        binding.checkboxSelectAll.isChecked = true
+        updateSaveButton()
+    }
+
+    private fun updateSaveButton() {
+        val selected = adapter.getSelectedCount()
+        val total = adapter.itemCount
+        binding.tvResultCount.text = "Найдено: $total  •  Выбрано: $selected"
+        binding.btnSaveSelected.text = "СОХРАНИТЬ ($selected)"
+        binding.btnSaveSelected.isEnabled = selected > 0
+    }
+
+    // ── Save ──────────────────────────────────────────────────
+
+    private fun saveSelected() {
+        val selected = adapter.getSelected()
+        if (selected.isEmpty()) return
+        val points = selected.map { p ->
+            val (lat, lon) = if (!p.isWgs84)
+                CoordConverter.sk42ToWgs84(p.x, p.y, p.zone)
+            else Pair(p.lat, p.lon)
+            Point(
+                name     = p.name.ifEmpty { "Точка" },
+                xSk42    = if (!p.isWgs84) p.x else 0.0,
+                ySk42    = if (!p.isWgs84) p.y else 0.0,
+                zone     = p.zone,
+                latWgs84 = lat,
+                lonWgs84 = lon,
+                source   = "scan"
+            )
+        }
+        viewModel.insertAll(points)
+        Toast.makeText(this, "Сохранено ${points.size} точек", Toast.LENGTH_LONG).show()
+        finish()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+        recognizer.close()
+    }
+}

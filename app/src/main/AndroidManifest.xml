@@ -38,6 +38,11 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".PhotoBatchActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".EditPointActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
