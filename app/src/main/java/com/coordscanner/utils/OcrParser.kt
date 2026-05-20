@@ -94,6 +94,11 @@ object OcrParser {
     }
 
     // ── Space-separated tables ───────────────────────────────
+    // When a line has 3+ large numbers (e.g. extra column before X and Y),
+    // we try ALL (i,j) pairs and pick the one with the LARGEST gap (y - x).
+    // Rationale: real Y has a zone prefix (7xxxxxx) so Y >> X, giving a
+    // gap of ~2 million. A "wrong" pair from adjacent columns (5.2M, 5.3M)
+    // has a gap of only ~100 k and is never chosen.
     private fun parseLines(text: String): List<ParsedCoord> {
         val results = mutableListOf<ParsedCoord>()
         val lines = text.lines()
@@ -101,17 +106,27 @@ object OcrParser {
         for ((idx, line) in lines.withIndex()) {
             val nums = extractNumbers(line)
 
-            // X and Y on same line
-            for (i in 0 until nums.size - 1) {
-                val x = nums[i].value; val y = nums[i + 1].value
-                if (isValidX(x) && isValidY(y)) {
+            // Best (X,Y) pair on this line — largest Y−X gap wins
+            var bestCoord: ParsedCoord? = null
+            var bestGap = Double.NEGATIVE_INFINITY
+            for (i in nums.indices) {
+                for (j in i + 1 until nums.size) {
+                    val x = nums[i].value; val y = nums[j].value
+                    if (!isValidX(x) || !isValidY(y)) continue
                     val zone = zoneOf(y) ?: continue
-                    val name = nameOnLine(line, nums[i].pos)
-                        .ifEmpty { nameFromPrevLine(lines, idx) }
-                    Log.d(TAG, "Line: '$name' x=$x y=$y zone=$zone")
-                    results.add(ParsedCoord(name, x, y, zone))
-                    break
+                    val gap = y - x
+                    if (gap > bestGap) {
+                        bestGap = gap
+                        val name = nameOnLine(line, nums[i].pos)
+                            .ifEmpty { nameFromPrevLine(lines, idx) }
+                        bestCoord = ParsedCoord(name, x, y, zone)
+                    }
                 }
+            }
+            if (bestCoord != null) {
+                Log.d(TAG, "Line: '${bestCoord.name}' x=${bestCoord.x} y=${bestCoord.y} gap=${bestGap.toLong()}")
+                results.add(bestCoord)
+                continue
             }
 
             // X on current line, Y on next line
@@ -121,9 +136,6 @@ object OcrParser {
                 val y = nextNums.firstOrNull { isValidY(it.value) }?.value
                 if (x != null && y != null) {
                     val zone = zoneOf(y) ?: continue
-                    // Skip if X and potential-Y have the same leading million digit AND
-                    // are close in value — likely two consecutive X values from a column,
-                    // not an X-Y pair from different columns
                     val sameLeading = (x / 1_000_000).toInt() == (y / 1_000_000).toInt()
                     if (sameLeading && Math.abs(x - y) < 500_000) continue
                     val name = nameOnLine(line, 0)
@@ -136,39 +148,37 @@ object OcrParser {
         return results
     }
 
-    // ── Column-format: all X values first, then all Y values ─
-    // OCR sometimes reads a 2-column table column-by-column instead of row-by-row.
-    // Detects: N numbers that are valid X followed by exactly N numbers that are valid Y.
+    // ── Column-format: OCR reads table column-by-column ──────
+    // Handles tables with extra leading columns (name codes, old coordinates, etc.)
+    // by trying skip=0,1,2,... prefix numbers until a valid [X block][Y block] is found.
     private fun parseColumnBlocks(text: String): List<ParsedCoord> {
-        // Collect every large number from the whole text in document order
         val allNums = mutableListOf<Double>()
-        for (line in text.lines()) {
-            extractNumbers(line).forEach { allNums.add(it.value) }
-        }
-
+        for (line in text.lines()) extractNumbers(line).forEach { allNums.add(it.value) }
         val n = allNums.size
-        if (n < 4 || n % 2 != 0) return emptyList()
+        if (n < 4) return emptyList()
 
-        val half = n / 2
-        val xCands = allNums.subList(0, half)
-        val yCands = allNums.subList(half, n)
+        for (skip in 0..(n / 3)) {
+            val rem = n - skip
+            if (rem < 4 || rem % 2 != 0) continue
+            val half = rem / 2
+            val xCands = allNums.subList(skip, skip + half)
+            val yCands = allNums.subList(skip + half, n)
 
-        if (!xCands.all { isValidX(it) }) return emptyList()
-        if (!yCands.all { isValidY(it) }) return emptyList()
+            if (!xCands.all { isValidX(it) }) continue
+            if (!yCands.all { isValidY(it) }) continue
 
-        // All Y must share the same zone
-        val zones = yCands.map { zoneOf(it) ?: return emptyList() }
-        val zone = zones[0]
-        if (!zones.all { it == zone }) return emptyList()
+            val zoneList = yCands.mapNotNull { zoneOf(it) }
+            if (zoneList.size != yCands.size) continue
+            val zone = zoneList[0]
+            if (zoneList.any { it != zone }) continue
+            if (Math.abs(xCands.average() - yCands.average()) < 300_000.0) continue
 
-        // The two groups must be meaningfully different in magnitude —
-        // if they're similar it's likely a single column of X values, not X+Y
-        if (Math.abs(xCands.average() - yCands.average()) < 300_000.0) return emptyList()
-
-        Log.d(TAG, "ColumnBlocks: $half pairs, zone=$zone")
-        return xCands.zip(yCands).mapIndexed { i, (x, y) ->
-            ParsedCoord("Точка ${i + 1}", x, y, zone)
+            Log.d(TAG, "ColumnBlocks: skip=$skip ${half}p zone=$zone")
+            return xCands.zip(yCands).mapIndexed { i, (x, y) ->
+                ParsedCoord("Точка ${i + 1}", x, y, zone)
+            }
         }
+        return emptyList()
     }
 
     // ── Degrees WGS-84 ───────────────────────────────────────
