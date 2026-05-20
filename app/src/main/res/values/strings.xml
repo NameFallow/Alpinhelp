@@ -14,7 +14,6 @@
     <string name="btn_delete">Удалить</string>
     <string name="hint_name">Название точки</string>
     <string name="hint_x">X (СК-42)</string>
-    <string name="hint_y">Y (СК-42)</string>
-    <string name="hint_zone">Номер зоны (1–32)</string>
+    <string name="hint_y">Y (СК-42, с номером зоны, напр. 7418954)</string>
     <string name="action_export">Экспорт GPX</string>
 </resources>

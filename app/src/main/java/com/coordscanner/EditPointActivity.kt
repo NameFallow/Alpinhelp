@@ -38,9 +38,8 @@ class EditPointActivity : AppCompatActivity() {
             if (point == null) { finish(); return@launch }
             currentPoint = point
             binding.etName.setText(point.name)
-            binding.etX.setText(point.xSk42.toString())
-            binding.etY.setText(point.ySk42.toString())
-            binding.etZone.setText(point.zone.toString())
+            binding.etX.setText(point.xSk42.toLong().toString())
+            binding.etY.setText(point.ySk42.toLong().toString())
         }
 
         binding.btnSave.setOnClickListener { saveChanges() }
@@ -50,22 +49,21 @@ class EditPointActivity : AppCompatActivity() {
         val name = binding.etName.text.toString().trim()
         val xStr = binding.etX.text.toString().trim()
         val yStr = binding.etY.text.toString().trim()
-        val zoneStr = binding.etZone.text.toString().trim()
 
-        if (name.isEmpty() || xStr.isEmpty() || yStr.isEmpty() || zoneStr.isEmpty()) {
+        if (name.isEmpty() || xStr.isEmpty() || yStr.isEmpty()) {
             Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show()
             return
         }
 
         val x = xStr.replace(",", ".").toDoubleOrNull()
         val y = yStr.replace(",", ".").toDoubleOrNull()
-        val zone = zoneStr.toIntOrNull()
 
-        if (x == null || y == null || zone == null || zone !in 1..32) {
-            Toast.makeText(this, "Проверьте правильность данных", Toast.LENGTH_SHORT).show()
+        if (x == null || y == null || x !in 1_000_000.0..9_999_999.0 || y !in 1_000_000.0..32_999_999.0) {
+            Toast.makeText(this, "Неверные координаты СК-42. X: ~5000000–6000000, Y: 7000000–32000000", Toast.LENGTH_LONG).show()
             return
         }
 
+        val zone = (y / 1_000_000).toInt()
         val (lat, lon) = CoordConverter.sk42ToWgs84(x, y, zone)
         val updated = currentPoint!!.copy(name = name, xSk42 = x, ySk42 = y, zone = zone, latWgs84 = lat, lonWgs84 = lon)
         viewModel.update(updated)
