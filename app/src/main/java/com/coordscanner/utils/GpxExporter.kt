@@ -35,9 +35,10 @@ object GpxExporter {
             appendLine("  <metadata><time>$now</time></metadata>")
 
             for (p in points) {
-                val (wgsLat, wgsLon) = if (p.xSk42 != 0.0)
-                    CoordConverter.sk42ToWgs84(p.xSk42, p.ySk42, p.zone)
-                else
+                val (wgsLat, wgsLon) = if (p.xSk42 != 0.0) {
+                    val zone = (p.ySk42 / 1_000_000).toInt().coerceIn(1, 32)
+                    CoordConverter.sk42ToWgs84(p.xSk42, p.ySk42, zone)
+                } else
                     Pair(p.latWgs84, p.lonWgs84)
                 val lat = "%.8f".format(wgsLat)
                 val lon = "%.8f".format(wgsLon)

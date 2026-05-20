@@ -101,6 +101,6 @@ object CoordConverter {
     fun wgs84ToDisplayString(lat: Double, lon: Double): String {
         val latHem = if (lat >= 0) "N" else "S"
         val lonHem = if (lon >= 0) "E" else "W"
-        return "${decimalToDms(lat)}$latHem  ${decimalToDms(lon)}$lonHem"
+        return "%.6f° %s   %.6f° %s".format(kotlin.math.abs(lat), latHem, kotlin.math.abs(lon), lonHem)
     }
 }

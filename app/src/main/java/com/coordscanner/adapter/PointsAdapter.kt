@@ -50,7 +50,11 @@ class PointsAdapter(
                 binding.tvSk42.text = "WGS-84 (из градусов)"
             }
 
-            binding.tvWgs84.text = CoordConverter.wgs84ToDisplayString(point.latWgs84, point.lonWgs84)
+            val (lat, lon) = if (point.xSk42 != 0.0) {
+                val zone = (point.ySk42 / 1_000_000).toInt().coerceIn(1, 32)
+                CoordConverter.sk42ToWgs84(point.xSk42, point.ySk42, zone)
+            } else Pair(point.latWgs84, point.lonWgs84)
+            binding.tvWgs84.text = CoordConverter.wgs84ToDisplayString(lat, lon)
             binding.btnEdit.setOnClickListener { onEdit(point) }
             binding.btnDelete.setOnClickListener { onDelete(point) }
         }
