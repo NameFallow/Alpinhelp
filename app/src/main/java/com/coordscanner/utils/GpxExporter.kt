@@ -44,8 +44,8 @@ object GpxExporter {
             for (p in points) {
                 // Use the pre-computed WGS-84 coordinates that CoordScanner already
                 // displayed to the user — guaranteed to match the on-screen values.
-                val lat = "%.8f".format(p.latWgs84)
-                val lon = "%.8f".format(p.lonWgs84)
+                val lat = String.format(Locale.US, "%.8f", p.latWgs84)
+                val lon = String.format(Locale.US, "%.8f", p.lonWgs84)
                 val name = escapeXml(p.name)
                 appendLine("""  <wpt lat="$lat" lon="$lon">""")
                 appendLine("    <name>$name</name>")
