@@ -15,6 +15,7 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
@@ -28,6 +29,7 @@ import androidx.core.content.ContextCompat
 import com.coordscanner.databinding.ActivityScanBinding
 import com.coordscanner.model.Point
 import com.coordscanner.utils.CoordConverter
+import com.coordscanner.utils.CoordsPrefs
 import com.coordscanner.utils.OcrParser
 import com.coordscanner.utils.ParsedCoord
 import com.coordscanner.viewmodel.PointViewModel
@@ -115,6 +117,12 @@ class ScanActivity : AppCompatActivity() {
             debugVisible = !debugVisible
             binding.scrollDebug.visibility = if (debugVisible) View.VISIBLE else View.GONE
             binding.btnDebug.text = if (debugVisible) "OCR ▲" else "OCR"
+        }
+
+        // Apply saved coordinate mode preference
+        if (CoordsPrefs.getMode(this) == CoordsPrefs.WGS84) {
+            scanMode = ScanMode.WGS84
+            binding.toggleCoordsMode.check(R.id.btnModeWgs84)
         }
 
         setupColorPicker()

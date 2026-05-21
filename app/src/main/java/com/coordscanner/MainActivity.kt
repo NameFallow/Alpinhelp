@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.PointsAdapter
 import com.coordscanner.databinding.ActivityMainBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.CoordsPrefs
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.viewmodel.PointViewModel
 
@@ -74,8 +75,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.action_export -> { exportGpx(); true }
+        R.id.action_export   -> { exportGpx(); true }
+        R.id.action_settings -> { showSettingsDialog(); true }
         else -> super.onOptionsItemSelected(item)
+    }
+
+    private fun showSettingsDialog() {
+        val current = CoordsPrefs.getMode(this)
+        val options = arrayOf("СК-42  (Гаусс-Крюгер)", "WGS-84  (широта / долгота °)")
+        val checkedIdx = if (current == CoordsPrefs.SK42) 0 else 1
+        AlertDialog.Builder(this)
+            .setTitle("Система координат ввода")
+            .setSingleChoiceItems(options, checkedIdx) { dialog, idx ->
+                CoordsPrefs.setMode(this, if (idx == 0) CoordsPrefs.SK42 else CoordsPrefs.WGS84)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Закрыть", null)
+            .show()
     }
 
     private fun exportGpx() {
