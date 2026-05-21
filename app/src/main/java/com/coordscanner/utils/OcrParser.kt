@@ -39,8 +39,15 @@ object OcrParser {
         results += parseDegrees(rawText)
         results += parseLabeledXY(rawText)
         results += parseLines(rawText)
-        // Column-format fallback: all X values first, then all Y values
-        if (results.none { !it.isWgs84 }) results += parseColumnBlocks(rawText)
+        // Column-format fallback: all X values first, then all Y values.
+        // Also trigger when parseLines found suspiciously few SK-42 pairs relative
+        // to the total number of large numbers in the text (e.g. column-by-column OCR).
+        val colBlocks = parseColumnBlocks(rawText)
+        val sk42FromLines = results.count { !it.isWgs84 }
+        if (colBlocks.size > sk42FromLines) {
+            results.removeAll { !it.isWgs84 }
+            results.addAll(colBlocks)
+        }
         val unique = results.distinctBy { "${it.x.toLong()}_${it.y.toLong()}_${it.isWgs84}" }
         Log.d(TAG, "Parsed ${unique.size} points")
         return unique
@@ -138,6 +145,9 @@ object OcrParser {
                     val zone = zoneOf(y) ?: continue
                     val sameLeading = (x / 1_000_000).toInt() == (y / 1_000_000).toInt()
                     if (sameLeading && Math.abs(x - y) < 500_000) continue
+                    // Y must be greater than X: real Y carries a zone prefix (e.g. 7×10^6)
+                    // making it substantially larger than the northing X value.
+                    if (y <= x) continue
                     val name = nameOnLine(line, 0)
                         .ifEmpty { nameFromPrevLine(lines, idx) }
                     Log.d(TAG, "MultiLine: '$name' x=$x y=$y zone=$zone")
