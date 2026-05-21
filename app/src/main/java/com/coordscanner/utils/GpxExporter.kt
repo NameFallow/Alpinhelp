@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import android.util.Log
 import com.coordscanner.model.Point
 import java.io.File
 import java.io.FileWriter
@@ -13,7 +14,13 @@ import java.util.Locale
 
 object GpxExporter {
 
+    private const val TAG = "GpxExporter"
+
     fun exportAndShare(context: Context, points: List<Point>) {
+        Log.d(TAG, "Exporting ${points.size} points:")
+        for (p in points) {
+            Log.d(TAG, "  ${p.name}: lat=${p.latWgs84}  lon=${p.lonWgs84}  xSk42=${p.xSk42}  ySk42=${p.ySk42}")
+        }
         val gpxContent = buildGpx(points)
         val file = writeGpxFile(context, gpxContent)
         shareGpxFile(context, file)
@@ -35,13 +42,10 @@ object GpxExporter {
             appendLine("  <metadata><time>$now</time></metadata>")
 
             for (p in points) {
-                val (wgsLat, wgsLon) = if (p.xSk42 != 0.0) {
-                    val zone = (p.ySk42 / 1_000_000).toInt().coerceIn(1, 32)
-                    CoordConverter.sk42ToWgs84(p.xSk42, p.ySk42, zone)
-                } else
-                    Pair(p.latWgs84, p.lonWgs84)
-                val lat = "%.8f".format(wgsLat)
-                val lon = "%.8f".format(wgsLon)
+                // Use the pre-computed WGS-84 coordinates that CoordScanner already
+                // displayed to the user — guaranteed to match the on-screen values.
+                val lat = "%.8f".format(p.latWgs84)
+                val lon = "%.8f".format(p.lonWgs84)
                 val name = escapeXml(p.name)
                 appendLine("""  <wpt lat="$lat" lon="$lon">""")
                 appendLine("    <name>$name</name>")
@@ -66,7 +70,9 @@ object GpxExporter {
 
     private fun writeGpxFile(context: Context, content: String): File {
         val dir = File(context.cacheDir, "gpx").apply { mkdirs() }
-        val file = File(dir, "coordscanner_export.gpx")
+        // Delete old exports so AlpineQuest can't serve a cached version of a stale URI.
+        dir.listFiles()?.forEach { it.delete() }
+        val file = File(dir, "coordscanner_${System.currentTimeMillis()}.gpx")
         FileWriter(file).use { it.write(content) }
         return file
     }
