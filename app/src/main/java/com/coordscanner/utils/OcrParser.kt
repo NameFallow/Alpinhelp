@@ -28,6 +28,23 @@ object OcrParser {
         "зона", "zone", "СК", "WGS", "GPS"
     )
 
+    // Returns the first meaningful text line that appears before any coordinate numbers.
+    // Used to pre-fill the batch point name from the table title (e.g. "Станция помех").
+    fun extractTableTitle(text: String): String {
+        val lines = text.lines()
+        val firstCoordIdx = lines.indexOfFirst { extractNumbers(it).isNotEmpty() }
+        if (firstCoordIdx <= 0) return ""
+        for (i in (firstCoordIdx - 1) downTo 0) {
+            val line = lines[i].trim()
+            if (line.isBlank()) continue
+            if (Regex("""\d{5,}""").containsMatchIn(line)) continue
+            if (!line.any { it.isLetter() }) continue
+            if (line.length < 3) continue
+            return line
+        }
+        return ""
+    }
+
     fun hasCoordinatePattern(text: String): Boolean =
         Regex("""\d{6,}""").containsMatchIn(text) ||
         Regex("""[XxХх]\s*[=:\-]""").containsMatchIn(text) ||

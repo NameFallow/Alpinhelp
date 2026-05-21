@@ -55,6 +55,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, PhotoBatchActivity::class.java))
         }
 
+        binding.btnGallery.setOnClickListener {
+            startActivity(Intent(this, PhotoBatchActivity::class.java).apply {
+                putExtra(PhotoBatchActivity.EXTRA_GALLERY_ONLY, true)
+            })
+        }
+
         binding.fab.setOnClickListener {
             startActivity(Intent(this, AddPointActivity::class.java))
         }

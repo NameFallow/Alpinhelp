@@ -31,7 +31,10 @@ import java.util.concurrent.Executors
 @OptIn(ExperimentalGetImage::class)
 class PhotoBatchActivity : AppCompatActivity() {
 
-    companion object { private const val TAG = "PhotoBatch" }
+    companion object {
+        private const val TAG = "PhotoBatch"
+        const val EXTRA_GALLERY_ONLY = "gallery_only"
+    }
 
     private lateinit var binding: ActivityPhotoBatchBinding
     private val viewModel: PointViewModel by viewModels()
@@ -43,9 +46,29 @@ class PhotoBatchActivity : AppCompatActivity() {
     private lateinit var scaleGestureDetector: ScaleGestureDetector
     private lateinit var adapter: CoordResultAdapter
 
+    private var galleryOnly = false
+    private var selectedBatchColor = "#0055FF"
+
+    private val batchColorMap: Map<Int, String> by lazy {
+        mapOf(
+            R.id.batchColorBlue   to "#0055FF",
+            R.id.batchColorRed    to "#FF2020",
+            R.id.batchColorGreen  to "#00BB00",
+            R.id.batchColorOrange to "#FF8800",
+            R.id.batchColorYellow to "#FFD700",
+            R.id.batchColorPurple to "#9900CC"
+        )
+    }
+
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> uri?.let { processImageUri(it) } }
+    ) { uri: Uri? ->
+        if (uri != null) {
+            processImageUri(uri)
+        } else if (galleryOnly && adapter.itemCount == 0) {
+            finish()
+        }
+    }
 
     private val requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -59,28 +82,71 @@ class PhotoBatchActivity : AppCompatActivity() {
         binding = ActivityPhotoBatchBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        galleryOnly = intent.getBooleanExtra(EXTRA_GALLERY_ONLY, false)
+
         adapter = CoordResultAdapter { updateSaveButton() }
         binding.recyclerResults.layoutManager = LinearLayoutManager(this)
         binding.recyclerResults.adapter = adapter
 
-        setupZoom()
+        setupBatchColorPicker()
+
+        if (!galleryOnly) {
+            setupZoom()
+        }
 
         binding.btnBack.setOnClickListener { finish() }
-        binding.btnCapture.setOnClickListener { takePhoto() }
-        binding.btnGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
-        binding.btnAddMore.setOnClickListener { showCamera() }
+        binding.btnAddMore.setOnClickListener {
+            if (galleryOnly) {
+                binding.resultsContainer.visibility = View.GONE
+                pickImageLauncher.launch("image/*")
+            } else {
+                showCamera()
+            }
+        }
         binding.btnSaveSelected.setOnClickListener { saveSelected() }
-        binding.btnClearResults.setOnClickListener { adapter.clearAll(); showCamera() }
+        binding.btnClearResults.setOnClickListener {
+            adapter.clearAll()
+            if (galleryOnly) {
+                pickImageLauncher.launch("image/*")
+            } else {
+                showCamera()
+            }
+        }
         binding.checkboxSelectAll.setOnCheckedChangeListener { _, checked ->
             adapter.selectAll(checked)
         }
-        binding.btnZoomIn.setOnClickListener { adjustZoom(1.4f) }
-        binding.btnZoomOut.setOnClickListener { adjustZoom(1f / 1.4f) }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            == PackageManager.PERMISSION_GRANTED
-        ) startCamera()
-        else requestPermission.launch(Manifest.permission.CAMERA)
+        if (galleryOnly) {
+            binding.cameraContainer.visibility = View.GONE
+            pickImageLauncher.launch("image/*")
+        } else {
+            binding.btnCapture.setOnClickListener { takePhoto() }
+            binding.btnGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
+            binding.btnZoomIn.setOnClickListener { adjustZoom(1.4f) }
+            binding.btnZoomOut.setOnClickListener { adjustZoom(1f / 1.4f) }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED
+            ) startCamera()
+            else requestPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // ── Batch color picker ────────────────────────────────────
+
+    private fun setupBatchColorPicker() {
+        for ((viewId, color) in batchColorMap) {
+            findViewById<View>(viewId).setOnClickListener { selectBatchColor(color) }
+        }
+        selectBatchColor(selectedBatchColor)
+    }
+
+    private fun selectBatchColor(color: String) {
+        selectedBatchColor = color
+        for ((viewId, dotColor) in batchColorMap) {
+            val dot = findViewById<View>(viewId)
+            val scale = if (dotColor == color) 1.4f else 1.0f
+            dot.animate().scaleX(scale).scaleY(scale).setDuration(150).start()
+        }
     }
 
     // ── Zoom ─────────────────────────────────────────────────
@@ -178,15 +244,21 @@ class PhotoBatchActivity : AppCompatActivity() {
     private fun processImage(image: InputImage) {
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                val parsed = OcrParser.parseText(visionText.text)
+                val rawText = visionText.text
+                val parsed = OcrParser.parseText(rawText)
+                val detectedTitle = OcrParser.extractTableTitle(rawText)
                 runOnUiThread {
                     binding.progressBar.visibility = View.GONE
                     if (parsed.isNotEmpty()) {
                         adapter.addAll(parsed)
+                        if (detectedTitle.isNotEmpty() && binding.etBatchName.text.isBlank()) {
+                            binding.etBatchName.setText(detectedTitle)
+                        }
                         showResults()
                         Toast.makeText(this, "Найдено: ${parsed.size} координат", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(this, "Координаты не найдены — попробуйте ближе или другой угол", Toast.LENGTH_LONG).show()
+                        if (galleryOnly) pickImageLauncher.launch("image/*")
                     }
                 }
             }
@@ -220,18 +292,22 @@ class PhotoBatchActivity : AppCompatActivity() {
     private fun saveSelected() {
         val selected = adapter.getSelected()
         if (selected.isEmpty()) return
-        val points = selected.map { p ->
+        val baseName = binding.etBatchName.text.toString().trim().ifEmpty { "Точка" }
+        val color = selectedBatchColor
+        val points = selected.mapIndexed { idx, p ->
             val (lat, lon) = if (!p.isWgs84)
                 CoordConverter.sk42ToWgs84(p.x, p.y, p.zone)
             else Pair(p.lat, p.lon)
+            val name = if (selected.size == 1) baseName else "$baseName ${idx + 1}"
             Point(
-                name     = p.name.ifEmpty { "Точка" },
+                name     = name,
                 xSk42    = if (!p.isWgs84) p.x else 0.0,
                 ySk42    = if (!p.isWgs84) p.y else 0.0,
                 zone     = p.zone,
                 latWgs84 = lat,
                 lonWgs84 = lon,
-                source   = "scan"
+                source   = "scan",
+                color    = color
             )
         }
         viewModel.insertAll(points)

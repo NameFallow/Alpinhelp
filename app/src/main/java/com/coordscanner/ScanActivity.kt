@@ -3,11 +3,9 @@ package com.coordscanner
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.media.AudioManager
 import android.media.ToneGenerator
-import android.net.Uri
 import android.os.*
 import android.util.Log
 import android.util.Size
@@ -17,10 +15,14 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.*
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.coordscanner.databinding.ActivityScanBinding
@@ -32,7 +34,6 @@ import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -57,12 +58,7 @@ class ScanActivity : AppCompatActivity() {
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
     private var camera: Camera? = null
-    private lateinit var imageCapture: ImageCapture
     private lateinit var scaleGestureDetector: ScaleGestureDetector
-
-    private val pickImageLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> uri?.let { processImageUri(it) } }
 
     private val recentDetections = ConcurrentHashMap<String, Long>()
     private val lastFrameTime = AtomicLong(0L)
@@ -124,9 +120,6 @@ class ScanActivity : AppCompatActivity() {
         setupColorPicker()
         setupModeToggle()
         setupZoom()
-
-        binding.btnCapture.setOnClickListener { takePhoto() }
-        binding.btnGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
 
         binding.btnSave.setOnClickListener {
             val p = pendingPoint ?: return@setOnClickListener
@@ -192,14 +185,10 @@ class ScanActivity : AppCompatActivity() {
                 .build()
                 .also { it.setAnalyzer(cameraExecutor, ::analyzeFrame) }
 
-            imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build()
-
             try {
                 cameraProvider.unbindAll()
                 camera = cameraProvider.bindToLifecycle(
-                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis, imageCapture
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
                 )
                 camera?.cameraInfo?.zoomState?.observe(this) { updateZoomLabel() }
             } catch (e: Exception) {
@@ -472,60 +461,6 @@ class ScanActivity : AppCompatActivity() {
     private fun updateZoomLabel() {
         val zoom = camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: 1f
         binding.tvZoomLevel.text = "%.1f×".format(zoom)
-    }
-
-    // ── Photo capture ─────────────────────────────────────────
-
-    private fun takePhoto() {
-        val photoFile = File(cacheDir, "coord_${System.currentTimeMillis()}.jpg")
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-        imageCapture.takePicture(
-            outputOptions,
-            ContextCompat.getMainExecutor(this),
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val bmp = BitmapFactory.decodeFile(photoFile.absolutePath) ?: return
-                    processImage(InputImage.fromBitmap(bmp, 0))
-                }
-                override fun onError(exc: ImageCaptureException) {
-                    Toast.makeText(this@ScanActivity, "Ошибка съёмки", Toast.LENGTH_SHORT).show()
-                }
-            }
-        )
-    }
-
-    // ── Gallery / URI processing ──────────────────────────────
-
-    private fun processImageUri(uri: Uri) {
-        try {
-            processImage(InputImage.fromFilePath(this, uri))
-        } catch (e: Exception) {
-            Toast.makeText(this, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun processImage(image: InputImage) {
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                val rawText = visionText.text
-                runOnUiThread {
-                    if (debugVisible) binding.tvDebugOcr.text = rawText
-                }
-                val parsed = OcrParser.parseText(rawText)
-                    .filter { p -> if (scanMode == ScanMode.SK42) !p.isWgs84 else p.isWgs84 }
-                runOnUiThread {
-                    if (parsed.isNotEmpty() && !confirmationShowing) {
-                        showConfirmation(parsed.first())
-                    } else if (parsed.isEmpty()) {
-                        Toast.makeText(this, "Координаты не найдены", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            .addOnFailureListener {
-                runOnUiThread {
-                    Toast.makeText(this, "Ошибка распознавания", Toast.LENGTH_SHORT).show()
-                }
-            }
     }
 
     override fun onDestroy() {

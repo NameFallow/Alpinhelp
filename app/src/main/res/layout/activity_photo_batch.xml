@@ -212,6 +212,94 @@
                 android:minHeight="0dp" />
         </LinearLayout>
 
+        <!-- Batch name field -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="4dp"
+            android:background="#0A1628">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Название точек"
+                android:textColor="#8BB4D8"
+                android:textSize="11sp"
+                android:layout_marginBottom="4dp" />
+
+            <EditText
+                android:id="@+id/etBatchName"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="@drawable/edit_bg"
+                android:paddingHorizontal="12dp"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textColorHint="#4D6E8A"
+                android:hint="Точка"
+                android:inputType="text"
+                android:maxLines="1" />
+        </LinearLayout>
+
+        <!-- Batch color picker -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:background="#0A1628">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Цвет:"
+                android:textColor="#8BB4D8"
+                android:textSize="12sp"
+                android:layout_marginEnd="8dp" />
+
+            <View android:id="@+id/batchColorBlue"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#0055FF" />
+            <View android:id="@+id/batchColorRed"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FF2020" />
+            <View android:id="@+id/batchColorGreen"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#00BB00" />
+            <View android:id="@+id/batchColorOrange"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FF8800" />
+            <View android:id="@+id/batchColorYellow"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FFD700" />
+            <View android:id="@+id/batchColorPurple"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#9900CC" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1C3050" />
+
         <!-- Select all row -->
         <LinearLayout
             android:layout_width="match_parent"

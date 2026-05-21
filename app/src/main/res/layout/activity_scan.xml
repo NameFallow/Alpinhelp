@@ -124,7 +124,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="252dp"
+        android:layout_marginBottom="140dp"
         android:background="@drawable/status_pill_bg"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -440,41 +440,5 @@
             android:minHeight="0dp" />
     </LinearLayout>
 
-    <!-- Photo capture + gallery buttons -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="128dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnGallery"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="50dp"
-            android:text="ГАЛЕРЕЯ"
-            android:textColor="#DDFFFFFF"
-            android:textSize="12sp"
-            android:paddingHorizontal="16dp"
-            android:layout_marginEnd="24dp"
-            app:strokeColor="#55FFFFFF" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCapture"
-            android:layout_width="66dp"
-            android:layout_height="66dp"
-            android:text="●"
-            android:textSize="22sp"
-            android:textColor="#FFFFFF"
-            android:padding="0dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            app:backgroundTint="#CC0D1B2A"
-            app:strokeColor="#CCFFFFFF"
-            app:strokeWidth="2dp"
-            app:cornerRadius="33dp" />
-    </LinearLayout>
 
 </FrameLayout>
