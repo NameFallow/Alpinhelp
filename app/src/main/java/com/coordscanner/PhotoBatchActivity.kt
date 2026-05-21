@@ -282,22 +282,22 @@ class PhotoBatchActivity : AppCompatActivity() {
     }
 
     private fun buildColumnPicker() {
-        val cols = adapter.getColumnOptions()
-        if (cols.size < 2) {
+        val options = adapter.getColumnOptions()
+        if (options.size < 2) {
             binding.columnPickerContainer.visibility = View.GONE
             return
         }
         binding.columnPickerContainer.visibility = View.VISIBLE
         binding.columnPickerRow.removeAllViews()
 
-        cols.forEachIndexed { colIdx, examples ->
-            val label = examples.take(2).joinToString(" / ")
+        options.forEach { opt ->
             val btn = MaterialButton(
                 this, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
             ).apply {
-                text = label
+                text = opt.label
                 textSize = 11f
+                @Suppress("DEPRECATION")
                 isAllCaps = false
                 setPadding(24, 0, 24, 0)
                 minWidth = 0
@@ -309,7 +309,7 @@ class PhotoBatchActivity : AppCompatActivity() {
                 lp.marginEnd = 8
                 layoutParams = lp
                 setOnClickListener {
-                    adapter.setNamesFromColumn(colIdx)
+                    adapter.setNamesFromMode(opt.mode)
                     binding.etBatchName.text?.clear()
                 }
             }
@@ -336,7 +336,8 @@ class PhotoBatchActivity : AppCompatActivity() {
             val (lat, lon) = if (!p.isWgs84)
                 CoordConverter.sk42ToWgs84(p.x, p.y, p.zone)
             else Pair(p.lat, p.lon)
-            // Priority: column selection → manual field → fallback "Точка"
+            // p.name is already currentName (set by column selection or default).
+            // Manual field overrides only if column selection was NOT used.
             val name = when {
                 adapter.hasColumnSelection -> p.name.ifEmpty { "Точка" }
                 manualName.isNotEmpty()    -> manualName

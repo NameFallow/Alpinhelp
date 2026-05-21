@@ -12,6 +12,18 @@ private data class CoordResultItem(
     var currentName: String = parsed.name.ifEmpty { "Точка" }
 )
 
+// How the batch name is derived from textCandidates
+enum class NameMode {
+    LAST_TOKEN,      // last word before coords → city/area name
+    ALL_EXCEPT_LAST, // everything except last word, joined → description/type
+    SINGLE           // only one token available
+}
+
+data class ColumnOption(
+    val label: String,       // shown on the button
+    val mode: NameMode
+)
+
 class CoordResultAdapter(
     private val onSelectionChanged: () -> Unit
 ) : RecyclerView.Adapter<CoordResultAdapter.VH>() {
@@ -19,6 +31,8 @@ class CoordResultAdapter(
     private val items = mutableListOf<CoordResultItem>()
     var hasColumnSelection = false
         private set
+
+    // ── Data operations ───────────────────────────────────────
 
     fun addAll(newItems: List<ParsedCoord>) {
         val existing = items.map { "${it.parsed.x.toLong()}_${it.parsed.y.toLong()}" }.toSet()
@@ -42,33 +56,63 @@ class CoordResultAdapter(
         onSelectionChanged()
     }
 
-    // Apply names from column index (0-based position in textCandidates).
-    fun setNamesFromColumn(col: Int) {
+    // ── Column / name selection ───────────────────────────────
+
+    // Returns smart options based on how many text tokens exist per row:
+    //   - 1 token only → no options (nothing to choose)
+    //   - 2+ tokens    → "last token" (city) AND "all-except-last joined" (description)
+    fun getColumnOptions(): List<ColumnOption> {
+        val options = mutableListOf<ColumnOption>()
+        val hasMulti = items.any { it.parsed.textCandidates.size > 1 }
+        if (!hasMulti) return emptyList()
+
+        // Option A — last token (city / area, different for each row)
+        val lastExamples = items.mapNotNull { it.parsed.textCandidates.lastOrNull() }
+            .filter { it.isNotBlank() }.distinct().take(2)
+        if (lastExamples.isNotEmpty()) {
+            options.add(ColumnOption(lastExamples.joinToString(" / "), NameMode.LAST_TOKEN))
+        }
+
+        // Option B — everything except last, joined (description/type, often same for all)
+        val descExamples = items.mapNotNull {
+            val t = it.parsed.textCandidates.dropLast(1)
+            if (t.isEmpty()) null else t.joinToString(" ")
+        }.filter { it.isNotBlank() }.distinct().take(2)
+        if (descExamples.isNotEmpty()) {
+            options.add(ColumnOption(descExamples.joinToString(" / "), NameMode.ALL_EXCEPT_LAST))
+        }
+
+        return options
+    }
+
+    fun setNamesFromMode(mode: NameMode) {
         items.forEach { item ->
-            val candidate = item.parsed.textCandidates.getOrNull(col)
-            if (!candidate.isNullOrBlank()) item.currentName = candidate
+            item.currentName = when (mode) {
+                NameMode.LAST_TOKEN ->
+                    item.parsed.textCandidates.lastOrNull()?.ifBlank { null } ?: item.parsed.name
+
+                NameMode.ALL_EXCEPT_LAST -> {
+                    val t = item.parsed.textCandidates.dropLast(1)
+                    if (t.isEmpty()) item.parsed.name else t.joinToString(" ")
+                }
+
+                NameMode.SINGLE ->
+                    item.parsed.textCandidates.firstOrNull()?.ifBlank { null } ?: item.parsed.name
+            }.ifEmpty { "Точка" }
         }
         hasColumnSelection = true
         notifyDataSetChanged()
         onSelectionChanged()
     }
 
-    // Returns unique text candidate columns across all items as a list of example labels.
-    // Each element = list of first-3 examples for that column position.
-    fun getColumnOptions(): List<List<String>> {
-        val maxCols = items.maxOfOrNull { it.parsed.textCandidates.size } ?: 0
-        return (0 until maxCols).map { col ->
-            items.mapNotNull { it.parsed.textCandidates.getOrNull(col) }
-                .filter { it.isNotBlank() }
-                .distinct()
-                .take(3)
-        }.filter { it.isNotEmpty() }
-    }
+    // ── Read-out ──────────────────────────────────────────────
 
     fun getSelected(): List<ParsedCoord> = items.filter { it.selected }
         .map { it.parsed.copy(name = it.currentName) }
 
     fun getSelectedCount(): Int = items.count { it.selected }
+
+    // ── RecyclerView ──────────────────────────────────────────
 
     inner class VH(val binding: ItemCoordResultBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -92,9 +136,7 @@ class CoordResultAdapter(
             item.selected = isChecked
             onSelectionChanged()
         }
-        holder.itemView.setOnClickListener {
-            holder.binding.checkboxItem.toggle()
-        }
+        holder.itemView.setOnClickListener { holder.binding.checkboxItem.toggle() }
     }
 
     override fun getItemCount() = items.size
