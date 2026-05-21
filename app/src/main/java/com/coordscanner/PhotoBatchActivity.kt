@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.Toast
+import com.google.android.material.button.MaterialButton
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -276,7 +277,44 @@ class PhotoBatchActivity : AppCompatActivity() {
         binding.cameraContainer.visibility = View.GONE
         binding.resultsContainer.visibility = View.VISIBLE
         binding.checkboxSelectAll.isChecked = true
+        buildColumnPicker()
         updateSaveButton()
+    }
+
+    private fun buildColumnPicker() {
+        val cols = adapter.getColumnOptions()
+        if (cols.size < 2) {
+            binding.columnPickerContainer.visibility = View.GONE
+            return
+        }
+        binding.columnPickerContainer.visibility = View.VISIBLE
+        binding.columnPickerRow.removeAllViews()
+
+        cols.forEachIndexed { colIdx, examples ->
+            val label = examples.take(2).joinToString(" / ")
+            val btn = MaterialButton(
+                this, null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                text = label
+                textSize = 11f
+                isAllCaps = false
+                setPadding(24, 0, 24, 0)
+                minWidth = 0
+                minimumWidth = 0
+                val lp = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    (40 * resources.displayMetrics.density).toInt()
+                )
+                lp.marginEnd = 8
+                layoutParams = lp
+                setOnClickListener {
+                    adapter.setNamesFromColumn(colIdx)
+                    binding.etBatchName.text?.clear()
+                }
+            }
+            binding.columnPickerRow.addView(btn)
+        }
     }
 
     private fun updateSaveButton() {
@@ -292,13 +330,18 @@ class PhotoBatchActivity : AppCompatActivity() {
     private fun saveSelected() {
         val selected = adapter.getSelected()
         if (selected.isEmpty()) return
-        val baseName = binding.etBatchName.text.toString().trim().ifEmpty { "Точка" }
+        val manualName = binding.etBatchName.text.toString().trim()
         val color = selectedBatchColor
-        val points = selected.mapIndexed { idx, p ->
+        val points = selected.map { p ->
             val (lat, lon) = if (!p.isWgs84)
                 CoordConverter.sk42ToWgs84(p.x, p.y, p.zone)
             else Pair(p.lat, p.lon)
-            val name = if (selected.size == 1) baseName else "$baseName ${idx + 1}"
+            // Priority: column selection → manual field → fallback "Точка"
+            val name = when {
+                adapter.hasColumnSelection -> p.name.ifEmpty { "Точка" }
+                manualName.isNotEmpty()    -> manualName
+                else                       -> p.name.ifEmpty { "Точка" }
+            }
             Point(
                 name     = name,
                 xSk42    = if (!p.isWgs84) p.x else 0.0,

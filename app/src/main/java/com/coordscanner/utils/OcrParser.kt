@@ -10,7 +10,10 @@ data class ParsedCoord(
     val isWgs84: Boolean = false,
     val lat: Double = 0.0,
     val lon: Double = 0.0,
-    val system: String = "СК-42"
+    val system: String = "СК-42",
+    // All text tokens found before the coordinates on the same line.
+    // Used to let the user pick which column to use as the point name.
+    val textCandidates: List<String> = emptyList()
 )
 
 object OcrParser {
@@ -141,9 +144,14 @@ object OcrParser {
                     val gap = y - x
                     if (gap > bestGap) {
                         bestGap = gap
-                        val name = nameOnLine(line, nums[i].pos)
-                            .ifEmpty { nameFromPrevLine(lines, idx) }
-                        bestCoord = ParsedCoord(name, x, y, zone)
+                        val firstNumPos = nums[i].pos
+                        val textsBefore = NAME_RE.findAll(line.substring(0, firstNumPos))
+                            .map { it.value }
+                            .filter { it !in SKIP_WORDS && it.length > 1 }
+                            .toList()
+                        val name = textsBefore.lastOrNull()
+                            ?: nameFromPrevLine(lines, idx)
+                        bestCoord = ParsedCoord(name, x, y, zone, textCandidates = textsBefore)
                     }
                 }
             }
@@ -165,10 +173,14 @@ object OcrParser {
                     // Y must be greater than X: real Y carries a zone prefix (e.g. 7×10^6)
                     // making it substantially larger than the northing X value.
                     if (y <= x) continue
-                    val name = nameOnLine(line, 0)
-                        .ifEmpty { nameFromPrevLine(lines, idx) }
+                    val textsBefore = NAME_RE.findAll(line)
+                        .map { it.value }
+                        .filter { it !in SKIP_WORDS && it.length > 1 }
+                        .toList()
+                    val name = textsBefore.lastOrNull()
+                        ?: nameFromPrevLine(lines, idx)
                     Log.d(TAG, "MultiLine: '$name' x=$x y=$y zone=$zone")
-                    results.add(ParsedCoord(name, x, y, zone))
+                    results.add(ParsedCoord(name, x, y, zone, textCandidates = textsBefore))
                 }
             }
         }

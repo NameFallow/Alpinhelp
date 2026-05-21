@@ -6,13 +6,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.coordscanner.databinding.ItemCoordResultBinding
 import com.coordscanner.utils.ParsedCoord
 
-private data class CoordResultItem(val parsed: ParsedCoord, var selected: Boolean = true)
+private data class CoordResultItem(
+    val parsed: ParsedCoord,
+    var selected: Boolean = true,
+    var currentName: String = parsed.name.ifEmpty { "Точка" }
+)
 
 class CoordResultAdapter(
     private val onSelectionChanged: () -> Unit
 ) : RecyclerView.Adapter<CoordResultAdapter.VH>() {
 
     private val items = mutableListOf<CoordResultItem>()
+    var hasColumnSelection = false
+        private set
 
     fun addAll(newItems: List<ParsedCoord>) {
         val existing = items.map { "${it.parsed.x.toLong()}_${it.parsed.y.toLong()}" }.toSet()
@@ -31,11 +37,37 @@ class CoordResultAdapter(
 
     fun clearAll() {
         items.clear()
+        hasColumnSelection = false
         notifyDataSetChanged()
         onSelectionChanged()
     }
 
-    fun getSelected(): List<ParsedCoord> = items.filter { it.selected }.map { it.parsed }
+    // Apply names from column index (0-based position in textCandidates).
+    fun setNamesFromColumn(col: Int) {
+        items.forEach { item ->
+            val candidate = item.parsed.textCandidates.getOrNull(col)
+            if (!candidate.isNullOrBlank()) item.currentName = candidate
+        }
+        hasColumnSelection = true
+        notifyDataSetChanged()
+        onSelectionChanged()
+    }
+
+    // Returns unique text candidate columns across all items as a list of example labels.
+    // Each element = list of first-3 examples for that column position.
+    fun getColumnOptions(): List<List<String>> {
+        val maxCols = items.maxOfOrNull { it.parsed.textCandidates.size } ?: 0
+        return (0 until maxCols).map { col ->
+            items.mapNotNull { it.parsed.textCandidates.getOrNull(col) }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .take(3)
+        }.filter { it.isNotEmpty() }
+    }
+
+    fun getSelected(): List<ParsedCoord> = items.filter { it.selected }
+        .map { it.parsed.copy(name = it.currentName) }
+
     fun getSelectedCount(): Int = items.count { it.selected }
 
     inner class VH(val binding: ItemCoordResultBinding) : RecyclerView.ViewHolder(binding.root)
@@ -49,7 +81,7 @@ class CoordResultAdapter(
         holder.binding.checkboxItem.setOnCheckedChangeListener(null)
         holder.binding.checkboxItem.isChecked = item.selected
 
-        holder.binding.tvItemName.text = item.parsed.name.ifEmpty { "Точка" }
+        holder.binding.tvItemName.text = item.currentName
         holder.binding.tvItemCoords.text = if (!item.parsed.isWgs84)
             "X: %,d   Y: %,d   зона %d".format(
                 item.parsed.x.toLong(), item.parsed.y.toLong(), item.parsed.zone)

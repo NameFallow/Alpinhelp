@@ -212,6 +212,40 @@
                 android:minHeight="0dp" />
         </LinearLayout>
 
+        <!-- Column picker: shown when OCR finds multiple text columns in the table -->
+        <LinearLayout
+            android:id="@+id/columnPickerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="0dp"
+            android:background="#0A1628"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Имя из столбца таблицы:"
+                android:textColor="#8BB4D8"
+                android:textSize="11sp"
+                android:layout_marginBottom="6dp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginBottom="8dp">
+
+                <LinearLayout
+                    android:id="@+id/columnPickerRow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+        </LinearLayout>
+
         <!-- Batch name field -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -225,7 +259,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Название точек"
+                android:text="Или одно название для всех:"
                 android:textColor="#8BB4D8"
                 android:textSize="11sp"
                 android:layout_marginBottom="4dp" />
