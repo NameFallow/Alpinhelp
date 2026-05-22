@@ -2,8 +2,10 @@ package com.coordscanner
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
@@ -27,7 +29,6 @@ import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
 import com.coordscanner.utils.RowMatcher
 import com.coordscanner.viewmodel.PointViewModel
-import android.content.res.ColorStateList
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -39,13 +40,7 @@ class ColumnSelectorActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ColumnSelector"
-        private const val COLOR_NAME = 0xFFFF8800.toInt()
-        private const val COLOR_X    = 0xFF2196F3.toInt()
-        private const val COLOR_Y    = 0xFF4CAF50.toInt()
     }
-
-    // Какую колонку сейчас назначаем
-    private enum class SelectMode { NONE, NAME, X, Y }
 
     private lateinit var binding: ActivityColumnSelectorBinding
     private val viewModel: PointViewModel by viewModels()
@@ -59,15 +54,9 @@ class ColumnSelectorActivity : AppCompatActivity() {
     private var capturedBitmap: Bitmap? = null
     private var imageRect = RectF()
 
-    // Дроби 0..1 от ширины изображения — центры выбранных колонок
-    private var nameFraction: Float? = null
-    private var xFraction: Float? = null
-    private var yFraction: Float? = null
-    private var selectMode = SelectMode.NONE
-
     private lateinit var adapter: NamedCoordAdapter
 
-    // ── Запрос разрешений и галерея ──────────────────────────
+    // ── Разрешения и галерея ─────────────────────────────────
 
     private val requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -104,7 +93,6 @@ class ColumnSelectorActivity : AppCompatActivity() {
 
     private fun setupCamera() {
         setupZoom()
-
         binding.btnBack.setOnClickListener { finish() }
         binding.btnCapture.setOnClickListener { takePhoto() }
         binding.btnGallery.setOnClickListener { pickImageLauncher.launch("image/*") }
@@ -174,8 +162,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
         imageCapture.takePicture(opts, ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val bmp = BitmapFactory.decodeFile(file.absolutePath)
                     binding.progressBarCamera.visibility = View.GONE
+                    val bmp = BitmapFactory.decodeFile(file.absolutePath)
                     if (bmp != null) showSelectionPhase(bmp)
                     else Toast.makeText(this@ColumnSelectorActivity, "Ошибка съёмки", Toast.LENGTH_SHORT).show()
                 }
@@ -199,30 +187,39 @@ class ColumnSelectorActivity : AppCompatActivity() {
         }
     }
 
-    // ── Фаза 2: выбор колонок ────────────────────────────────
+    // ── Фаза 2: выделение колонок прямоугольниками ───────────
 
     private fun setupSelectionPanel() {
-        binding.btnColName.setOnClickListener { activateMode(SelectMode.NAME) }
-        binding.btnColX.setOnClickListener   { activateMode(SelectMode.X) }
-        binding.btnColY.setOnClickListener   { activateMode(SelectMode.Y) }
+        // Кнопки устанавливают activeType на оверлей; оверлей сам обрабатывает рисование
+        binding.btnColName.setOnClickListener { toggleColumnMode(SelectionOverlayView.ColumnType.NAME) }
+        binding.btnColX.setOnClickListener   { toggleColumnMode(SelectionOverlayView.ColumnType.X) }
+        binding.btnColY.setOnClickListener   { toggleColumnMode(SelectionOverlayView.ColumnType.Y) }
         binding.btnScanColumns.setOnClickListener { runOcr() }
 
-        binding.overlayView.onTap = { x, y -> onImageTap(x, y) }
+        // Callback: прямоугольник подтверждён (ACTION_UP с нормальным размером)
+        binding.overlayView.onRectConfirmed = { _, _ -> updateSelectionUI() }
+
+        // Callback: состояние изменилось (activeType сменился)
+        binding.overlayView.onSelectionStateChanged = { updateSelectionUI() }
+    }
+
+    // Переключает режим выделения: повторный тап отменяет, не очищая готовый прямоугольник
+    private fun toggleColumnMode(type: SelectionOverlayView.ColumnType) {
+        binding.overlayView.activeType = if (binding.overlayView.activeType == type) null else type
+        updateSelectionUI()
     }
 
     private fun showSelectionPhase(bitmap: Bitmap) {
         capturedBitmap = bitmap
-        nameFraction = null; xFraction = null; yFraction = null
-        selectMode = SelectMode.NONE
+        binding.overlayView.clearAll()
 
         binding.ivPhoto.setImageBitmap(bitmap)
         binding.cameraContainer.visibility = View.GONE
         binding.selectionContainer.visibility = View.VISIBLE
         binding.resultsContainer.visibility = View.GONE
 
-        // imageRect вычисляем после layout, когда размеры ImageView известны
+        // imageRect вычисляем после layout
         binding.ivPhoto.doOnLayout { computeImageRect(bitmap) }
-
         updateSelectionUI()
     }
 
@@ -234,82 +231,47 @@ class ColumnSelectorActivity : AppCompatActivity() {
         val scale = minOf(vw / bitmap.width, vh / bitmap.height)
         val scaledW = bitmap.width * scale
         val scaledH = bitmap.height * scale
-        val left = (vw - scaledW) / 2f
-        val top  = (vh - scaledH) / 2f
-        imageRect = RectF(left, top, left + scaledW, top + scaledH)
+        imageRect = RectF(
+            (vw - scaledW) / 2f,
+            (vh - scaledH) / 2f,
+            (vw + scaledW) / 2f,
+            (vh + scaledH) / 2f
+        )
         binding.overlayView.imageRect = imageRect
     }
 
-    private fun activateMode(mode: SelectMode) {
-        // Повторный тап по активной кнопке — сбросить эту колонку
-        if (selectMode == mode) {
-            selectMode = SelectMode.NONE
-            when (mode) {
-                SelectMode.NAME -> nameFraction = null
-                SelectMode.X    -> xFraction = null
-                SelectMode.Y    -> yFraction = null
-                SelectMode.NONE -> {}
-            }
-        } else {
-            selectMode = mode
-        }
-        updateSelectionUI()
-    }
-
-    private fun onImageTap(touchX: Float, touchY: Float) {
-        if (selectMode == SelectMode.NONE) return
-        if (imageRect.isEmpty) return
-
-        // Переводим координату тапа в дробь от ширины изображения
-        val fraction = ((touchX - imageRect.left) / imageRect.width()).coerceIn(0f, 1f)
-
-        when (selectMode) {
-            SelectMode.NAME -> nameFraction = fraction
-            SelectMode.X    -> xFraction    = fraction
-            SelectMode.Y    -> yFraction    = fraction
-            SelectMode.NONE -> return
-        }
-        selectMode = SelectMode.NONE
-        updateSelectionUI()
-    }
-
     private fun updateSelectionUI() {
-        // Обновляем оверлей
-        val marks = buildList {
-            nameFraction?.let { add(ColumnOverlayView.ColumnMark(it, COLOR_NAME, "НАЗВАНИЕ")) }
-            xFraction?.let    { add(ColumnOverlayView.ColumnMark(it, COLOR_X,    "X")) }
-            yFraction?.let    { add(ColumnOverlayView.ColumnMark(it, COLOR_Y,    "Y")) }
-        }
-        binding.overlayView.setMarks(marks)
+        val overlay = binding.overlayView
+        styleColumnButton(
+            binding.btnColName,
+            confirmed = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.NAME) != null,
+            active    = overlay.activeType == SelectionOverlayView.ColumnType.NAME,
+            color     = SelectionOverlayView.COLOR_NAME,
+            label     = "НАЗВАНИЕ"
+        )
+        styleColumnButton(
+            binding.btnColX,
+            confirmed = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.X) != null,
+            active    = overlay.activeType == SelectionOverlayView.ColumnType.X,
+            color     = SelectionOverlayView.COLOR_X,
+            label     = "X"
+        )
+        styleColumnButton(
+            binding.btnColY,
+            confirmed = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.Y) != null,
+            active    = overlay.activeType == SelectionOverlayView.ColumnType.Y,
+            color     = SelectionOverlayView.COLOR_Y,
+            label     = "Y"
+        )
 
-        // Состояния кнопок колонок
-        styleColumnButton(binding.btnColName, nameFraction != null, selectMode == SelectMode.NAME, COLOR_NAME, "НАЗВАНИЕ")
-        styleColumnButton(binding.btnColX,    xFraction    != null, selectMode == SelectMode.X,    COLOR_X,    "X")
-        styleColumnButton(binding.btnColY,    yFraction    != null, selectMode == SelectMode.Y,    COLOR_Y,    "Y")
-
-        // Подсказка посередине фото
-        if (selectMode != SelectMode.NONE) {
-            val label = when (selectMode) {
-                SelectMode.NAME -> "НАЗВАНИЕ"
-                SelectMode.X    -> "X"
-                SelectMode.Y    -> "Y"
-                SelectMode.NONE -> ""
-            }
-            binding.tvTapHint.text = "Тапните по колонке\n$label"
-            binding.tvTapHint.visibility = View.VISIBLE
-        } else {
-            binding.tvTapHint.visibility = View.GONE
-        }
-
-        // Статус
-        val ready = nameFraction != null && xFraction != null && yFraction != null
+        val allReady = overlay.hasAllRects()
+        val anyActive = overlay.activeType != null
         binding.tvSelectionStatus.text = when {
-            ready -> "Все колонки выбраны. Нажмите СКАНИРОВАТЬ"
-            selectMode != SelectMode.NONE -> "Тапните по нужной колонке на фото"
-            else -> "Нажмите кнопку, затем тапните по нужной колонке"
+            anyActive  -> "Нарисуйте прямоугольник вокруг нужной колонки"
+            allReady   -> "Все колонки выделены. Нажмите СКАНИРОВАТЬ"
+            else       -> "Нажмите кнопку, затем нарисуйте область на фото"
         }
-
-        binding.btnScanColumns.isEnabled = ready
+        binding.btnScanColumns.isEnabled = allReady && !anyActive
     }
 
     private fun styleColumnButton(
@@ -322,49 +284,51 @@ class ColumnSelectorActivity : AppCompatActivity() {
         when {
             active -> {
                 btn.backgroundTintList = ColorStateList.valueOf(color)
-                btn.setTextColor(0xFFFFFFFF.toInt())
-                btn.text = "↓ $label"
+                btn.setTextColor(Color.WHITE)
+                btn.text = "✏ $label"
             }
             confirmed -> {
-                btn.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+                btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
                 btn.setTextColor(color)
                 btn.text = "✓ $label"
             }
             else -> {
-                btn.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+                btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
                 btn.setTextColor(color)
                 btn.text = label
             }
         }
     }
 
-    // ── OCR и сопоставление строк ────────────────────────────
+    // ── OCR ──────────────────────────────────────────────────
 
     private fun runOcr() {
         val bitmap = capturedBitmap ?: return
-        val nf = nameFraction ?: return
-        val xf = xFraction    ?: return
-        val yf = yFraction    ?: return
+        val overlay = binding.overlayView
+        val nameRect = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.NAME) ?: return
+        val xRect    = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.X)    ?: return
+        val yRect    = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.Y)    ?: return
 
         binding.progressBarOcr.visibility = View.VISIBLE
         binding.btnScanColumns.isEnabled = false
 
-        val image = InputImage.fromBitmap(bitmap, 0)
-        recognizer.process(image)
+        recognizer.process(InputImage.fromBitmap(bitmap, 0))
             .addOnSuccessListener { visionText ->
                 val rows = RowMatcher.match(
-                    visionText   = visionText,
-                    bitmapWidth  = bitmap.width,
-                    nameFraction = nf,
-                    xFraction    = xf,
-                    yFraction    = yf
+                    visionText    = visionText,
+                    bitmapWidth   = bitmap.width,
+                    bitmapHeight  = bitmap.height,
+                    nameViewRect  = nameRect,
+                    xViewRect     = xRect,
+                    yViewRect     = yRect,
+                    imageViewRect = imageRect
                 )
                 runOnUiThread {
                     binding.progressBarOcr.visibility = View.GONE
                     if (rows.isEmpty()) {
                         Toast.makeText(
                             this,
-                            "Строк не найдено. Проверьте выбор колонок.",
+                            "Строк не найдено. Проверьте выделенные области.",
                             Toast.LENGTH_LONG
                         ).show()
                         binding.btnScanColumns.isEnabled = true
@@ -394,11 +358,9 @@ class ColumnSelectorActivity : AppCompatActivity() {
         }
 
         binding.btnBackToSelection.setOnClickListener {
-            // Возвращаемся к экрану выбора колонок без сброса фракций
             binding.resultsContainer.visibility = View.GONE
             binding.selectionContainer.visibility = View.VISIBLE
-            binding.btnScanColumns.isEnabled =
-                nameFraction != null && xFraction != null && yFraction != null
+            binding.btnScanColumns.isEnabled = binding.overlayView.hasAllRects()
         }
 
         binding.btnSaveSelected.setOnClickListener { saveSelected() }
@@ -408,10 +370,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
     private fun showResultsPhase(rows: List<MatchedRow>) {
         adapter.setData(rows)
         binding.checkboxSelectAll.isChecked = true
-
         binding.selectionContainer.visibility = View.GONE
         binding.resultsContainer.visibility = View.VISIBLE
-
         updateResultButtons()
         Toast.makeText(this, "Найдено строк: ${rows.size}", Toast.LENGTH_SHORT).show()
     }
@@ -428,23 +388,18 @@ class ColumnSelectorActivity : AppCompatActivity() {
     // ── Сохранение и экспорт ─────────────────────────────────
 
     private fun saveSelected() {
-        val rows = adapter.getSelected()
-        if (rows.isEmpty()) return
-
-        val points = rows.map { row -> rowToPoint(row, source = "scan") }
-        viewModel.insertAll(points)
-        Toast.makeText(this, "Сохранено ${points.size} точек", Toast.LENGTH_LONG).show()
+        val rows = adapter.getSelected().ifEmpty { return }
+        viewModel.insertAll(rows.map { rowToPoint(it) })
+        Toast.makeText(this, "Сохранено ${rows.size} точек", Toast.LENGTH_LONG).show()
         finish()
     }
 
     private fun exportGpx() {
-        val rows = adapter.getSelected()
-        if (rows.isEmpty()) return
-        val points = rows.map { row -> rowToPoint(row, source = "scan") }
-        GpxExporter.exportAndShare(this, points)
+        val rows = adapter.getSelected().ifEmpty { return }
+        GpxExporter.exportAndShare(this, rows.map { rowToPoint(it) })
     }
 
-    private fun rowToPoint(row: MatchedRow, source: String): Point {
+    private fun rowToPoint(row: MatchedRow): Point {
         val (lat, lon) = CoordConverter.sk42ToWgs84(row.x, row.y, row.zone)
         return Point(
             name     = row.name.ifEmpty { "Точка" },
@@ -453,7 +408,7 @@ class ColumnSelectorActivity : AppCompatActivity() {
             zone     = row.zone,
             latWgs84 = lat,
             lonWgs84 = lon,
-            source   = source
+            source   = "scan"
         )
     }
 }

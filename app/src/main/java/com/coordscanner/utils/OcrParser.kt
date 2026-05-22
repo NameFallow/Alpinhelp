@@ -295,6 +295,29 @@ object OcrParser {
         return "Точка"
     }
 
+    // ── Постобработка кириллицы ──────────────────────────────
+
+    // ML Kit в смешанном режиме путает латинские и кириллические буквы.
+    // Применять ТОЛЬКО к текстовым названиям, не к числовым полям.
+    fun fixCyrillicName(text: String): String {
+        val map = mapOf(
+            'C' to 'С', 'c' to 'с',
+            'T' to 'Т',
+            'A' to 'А', 'a' to 'а',
+            'I' to 'И',
+            'O' to 'О', 'o' to 'о',
+            'P' to 'Р', 'p' to 'р',
+            'H' to 'Н',
+            'E' to 'Е', 'e' to 'е',
+            'B' to 'В',
+            'M' to 'М', 'm' to 'м',
+            'K' to 'К', 'k' to 'к',
+            'X' to 'Х', 'x' to 'х'
+        )
+        val fixed = text.map { map[it] ?: it }.joinToString("")
+        return fixed.trim().lowercase().replaceFirstChar { it.uppercaseChar() }
+    }
+
     // ── Helpers ──────────────────────────────────────────────
 
     private fun cleanNum(s: String): Double? =

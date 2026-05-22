@@ -12,7 +12,8 @@ import com.coordscanner.utils.CoordConverter
 
 class PointsAdapter(
     private val onEdit: (Point) -> Unit,
-    private val onDelete: (Point) -> Unit
+    private val onDelete: (Point) -> Unit,
+    private val onLongClick: ((Point) -> Unit)? = null
 ) : ListAdapter<Point, PointsAdapter.ViewHolder>(DIFF) {
 
     inner class ViewHolder(private val binding: ItemPointBinding) :
@@ -57,6 +58,9 @@ class PointsAdapter(
             binding.tvWgs84.text = CoordConverter.wgs84ToDisplayString(lat, lon)
             binding.btnEdit.setOnClickListener { onEdit(point) }
             binding.btnDelete.setOnClickListener { onDelete(point) }
+            if (onLongClick != null) {
+                binding.root.setOnLongClickListener { onLongClick.invoke(point); true }
+            }
         }
     }
 

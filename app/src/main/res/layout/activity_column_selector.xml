@@ -182,25 +182,11 @@
                 android:scaleType="fitCenter"
                 android:contentDescription="Фото таблицы" />
 
-            <!-- Оверлей рисует цветные полосы выбранных колонок -->
-            <com.coordscanner.ColumnOverlayView
+            <!-- Оверлей: рисование прямоугольников выбора колонок -->
+            <com.coordscanner.SelectionOverlayView
                 android:id="@+id/overlayView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
-
-            <!-- Подсказка при активном режиме выбора -->
-            <TextView
-                android:id="@+id/tvTapHint"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:background="#CC000000"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:fontFamily="sans-serif-medium"
-                android:padding="16dp"
-                android:gravity="center"
-                android:visibility="gone" />
 
         </FrameLayout>
 
@@ -240,13 +226,13 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:text="НАЗВАНИЕ"
-                    android:textSize="11sp"
+                    android:textSize="10sp"
                     android:padding="0dp"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
-                    app:strokeColor="#FF8800"
+                    app:strokeColor="#2196F3"
                     app:strokeWidth="1.5dp"
-                    android:textColor="#FF8800" />
+                    android:textColor="#2196F3" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnColX"
@@ -256,13 +242,13 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:text="X"
-                    android:textSize="11sp"
+                    android:textSize="10sp"
                     android:padding="0dp"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
-                    app:strokeColor="#2196F3"
+                    app:strokeColor="#4CAF50"
                     app:strokeWidth="1.5dp"
-                    android:textColor="#2196F3" />
+                    android:textColor="#4CAF50" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnColY"
@@ -271,13 +257,13 @@
                     android:layout_height="44dp"
                     android:layout_weight="1"
                     android:text="Y"
-                    android:textSize="11sp"
+                    android:textSize="10sp"
                     android:padding="0dp"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
-                    app:strokeColor="#4CAF50"
+                    app:strokeColor="#E53935"
                     app:strokeWidth="1.5dp"
-                    android:textColor="#4CAF50" />
+                    android:textColor="#E53935" />
 
             </LinearLayout>
 

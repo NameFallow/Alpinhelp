@@ -1,10 +1,13 @@
 package com.coordscanner
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -31,7 +34,8 @@ class MainActivity : AppCompatActivity() {
 
         adapter = PointsAdapter(
             onEdit = { point -> openEdit(point) },
-            onDelete = { point -> confirmDelete(point) }
+            onDelete = { point -> confirmDelete(point) },
+            onLongClick = { point -> showQuickEditDialog(point) }
         )
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
@@ -122,6 +126,62 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Удалить точку")
             .setMessage("Удалить «${point.name}»?")
             .setPositiveButton("Удалить") { _, _ -> viewModel.delete(point) }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    // Диалог быстрого редактирования по долгому тапу (название + цвет)
+    private fun showQuickEditDialog(point: Point) {
+        val density = resources.displayMetrics.density
+
+        val editText = EditText(this).apply {
+            setText(point.name)
+            selectAll()
+            setTextColor(Color.WHITE)
+            setBackgroundResource(R.drawable.edit_bg)
+            setPadding(
+                (12 * density).toInt(), (10 * density).toInt(),
+                (12 * density).toInt(), (10 * density).toInt()
+            )
+        }
+
+        // Храним выбранный цвет локально пока диалог открыт
+        var pendingColor = point.color
+
+        val btnColor = com.google.android.material.button.MaterialButton(
+            this, null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle
+        ).apply {
+            text = "Изменить цвет"
+            setTextColor(Color.parseColor("#8BB4D8"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = (10 * density).toInt() }
+            setOnClickListener {
+                ColorPickerDialog.show(this@MainActivity, pendingColor) { hex ->
+                    pendingColor = hex
+                }
+            }
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                (20 * density).toInt(), (16 * density).toInt(),
+                (20 * density).toInt(), (8  * density).toInt()
+            )
+            addView(editText)
+            addView(btnColor)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Изменить точку")
+            .setView(container)
+            .setPositiveButton("Сохранить") { _, _ ->
+                val newName = editText.text.toString().trim().ifEmpty { point.name }
+                viewModel.update(point.copy(name = newName, color = pendingColor))
+            }
             .setNegativeButton("Отмена", null)
             .show()
     }

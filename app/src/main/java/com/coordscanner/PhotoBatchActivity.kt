@@ -57,7 +57,8 @@ class PhotoBatchActivity : AppCompatActivity() {
             R.id.batchColorGreen  to "#00BB00",
             R.id.batchColorOrange to "#FF8800",
             R.id.batchColorYellow to "#FFD700",
-            R.id.batchColorPurple to "#9900CC"
+            R.id.batchColorPurple to "#9900CC",
+            R.id.batchColorWhite  to "#FFFFFF"
         )
     }
 

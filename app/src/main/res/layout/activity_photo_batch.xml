@@ -326,6 +326,11 @@
                 android:layout_margin="4dp"
                 android:background="@drawable/color_circle"
                 android:backgroundTint="#9900CC" />
+            <View android:id="@+id/batchColorWhite"
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="#FFFFFF" />
         </LinearLayout>
 
         <!-- Divider -->

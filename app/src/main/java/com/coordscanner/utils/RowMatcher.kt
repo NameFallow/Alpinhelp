@@ -1,5 +1,7 @@
 package com.coordscanner.utils
 
+import android.graphics.Rect
+import android.graphics.RectF
 import android.util.Log
 import com.google.mlkit.vision.text.Text
 import kotlin.math.abs
@@ -12,50 +14,81 @@ object RowMatcher {
 
     private const val TAG = "RowMatcher"
 
-    // Строки с разницей centerY меньше этого значения считаются одной строкой таблицы
+    // Строки с разницей centerY меньше этого значения — одна строка таблицы
     private const val MERGE_PX = 30
 
-    // Максимальное расстояние по Y между колонками одной строки
+    // Максимальное расстояние по Y между колонками для матчинга одной строки
     private const val MATCH_PX = 80
 
+    /**
+     * Сопоставляет строки из трёх выделенных областей (название, X, Y).
+     *
+     * @param nameViewRect  прямоугольник колонки "Название" в координатах View
+     * @param xViewRect     прямоугольник колонки X в координатах View
+     * @param yViewRect     прямоугольник колонки Y в координатах View
+     * @param imageViewRect прямоугольник отображаемого изображения в View (для масштабирования)
+     */
     fun match(
         visionText: Text,
         bitmapWidth: Int,
-        nameFraction: Float,
-        xFraction: Float,
-        yFraction: Float,
-        stripWidthFraction: Float = 0.15f
+        bitmapHeight: Int,
+        nameViewRect: RectF,
+        xViewRect: RectF,
+        yViewRect: RectF,
+        imageViewRect: RectF
     ): List<MatchedRow> {
-        val half = (bitmapWidth * stripWidthFraction / 2f).toInt()
-        val nameCx = (nameFraction * bitmapWidth).toInt()
-        val xCx    = (xFraction    * bitmapWidth).toInt()
-        val yCx    = (yFraction    * bitmapWidth).toInt()
+        val nameImgRect = viewRectToImage(nameViewRect, imageViewRect, bitmapWidth, bitmapHeight)
+        val xImgRect    = viewRectToImage(xViewRect,    imageViewRect, bitmapWidth, bitmapHeight)
+        val yImgRect    = viewRectToImage(yViewRect,    imageViewRect, bitmapWidth, bitmapHeight)
 
-        val nameLines = extractLines(visionText, nameCx, half)
-        val xLines    = extractLines(visionText, xCx, half)
-        val yLines    = extractLines(visionText, yCx, half)
+        val nameLines = extractLines(visionText, nameImgRect, fixCyrillic = true)
+        val xLines    = extractLines(visionText, xImgRect,    fixCyrillic = false)
+        val yLines    = extractLines(visionText, yImgRect,    fixCyrillic = false)
 
-        Log.d(TAG, "Строк по колонкам: название=${nameLines.size} x=${xLines.size} y=${yLines.size}")
+        Log.d(TAG, "Строк в области: название=${nameLines.size} x=${xLines.size} y=${yLines.size}")
 
         return matchRows(nameLines, xLines, yLines)
     }
 
-    private fun extractLines(text: Text, centerX: Int, half: Int): List<RowLine> {
-        val xMin = centerX - half
-        val xMax = centerX + half
+    // ── Вспомогательные функции ───────────────────────────────
+
+    // Переводит прямоугольник из пространства View в пространство пикселей изображения
+    private fun viewRectToImage(
+        viewRect: RectF,
+        imageViewRect: RectF,
+        bitmapWidth: Int,
+        bitmapHeight: Int
+    ): Rect {
+        if (imageViewRect.isEmpty) return Rect(0, 0, bitmapWidth, bitmapHeight)
+        val scaleX = bitmapWidth.toFloat()  / imageViewRect.width()
+        val scaleY = bitmapHeight.toFloat() / imageViewRect.height()
+        return Rect(
+            ((viewRect.left  - imageViewRect.left) * scaleX).toInt().coerceAtLeast(0),
+            ((viewRect.top   - imageViewRect.top)  * scaleY).toInt().coerceAtLeast(0),
+            ((viewRect.right - imageViewRect.left) * scaleX).toInt().coerceAtMost(bitmapWidth),
+            ((viewRect.bottom- imageViewRect.top)  * scaleY).toInt().coerceAtMost(bitmapHeight)
+        )
+    }
+
+    // Извлекает строки, центр которых попадает в заданный прямоугольник изображения
+    private fun extractLines(text: Text, boundRect: Rect, fixCyrillic: Boolean): List<RowLine> {
         val lines = mutableListOf<RowLine>()
         for (block in text.textBlocks) {
             for (line in block.lines) {
                 val box = line.boundingBox ?: continue
-                if (box.exactCenterX().toInt() in xMin..xMax) {
-                    lines += RowLine(line.text.trim(), box.exactCenterY().toInt())
+                val cx = box.exactCenterX().toInt()
+                val cy = box.exactCenterY().toInt()
+                if (boundRect.contains(cx, cy)) {
+                    val raw = line.text.trim()
+                    val processed = if (fixCyrillic) OcrParser.fixCyrillicName(raw) else raw
+                    lines += RowLine(processed, cy)
                 }
             }
         }
         return mergeRows(lines.sortedBy { it.centerY })
     }
 
-    // Объединяет строки, которые OCR разбил на несколько, но физически это одна строка таблицы
+    // Объединяет строки, разбитые OCR, но физически расположенные в одной строке таблицы
     private fun mergeRows(lines: List<RowLine>): List<RowLine> {
         if (lines.isEmpty()) return emptyList()
         val merged = mutableListOf<RowLine>()
@@ -83,7 +116,6 @@ object RowMatcher {
             val xVal = parseNumber(xRow.text) ?: continue
             if (!isValidX(xVal)) continue
 
-            // Ищем ближайшую строку Y в пределах порога
             val yRow = yLines
                 .minByOrNull { abs(it.centerY - xRow.centerY) }
                 ?.takeIf { abs(it.centerY - xRow.centerY) <= MATCH_PX } ?: continue
@@ -91,8 +123,8 @@ object RowMatcher {
             if (!isValidY(yVal)) continue
             val zone = zoneOf(yVal) ?: continue
 
-            // Имя — ближайшая строка из колонки название (порог увеличен, т.к. текст иногда сдвинут)
-            val nameRow = nameLines.minByOrNull { abs(it.centerY - xRow.centerY) }
+            val nameRow = nameLines
+                .minByOrNull { abs(it.centerY - xRow.centerY) }
                 ?.takeIf { abs(it.centerY - xRow.centerY) <= MATCH_PX * 2 }
             val name = nameRow?.text?.trim()?.ifEmpty { null } ?: "Точка"
 
