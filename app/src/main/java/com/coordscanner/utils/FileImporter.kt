@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.coordscanner.model.WayPoint
-import java.util.zip.ZipInputStream
 
 class FileImporter(private val context: Context) {
 
@@ -18,29 +17,12 @@ class FileImporter(private val context: Context) {
             fileName.endsWith(".kml", ignoreCase = true) ->
                 context.contentResolver.openInputStream(uri)?.use { KmlParser.parse(it) }
             fileName.endsWith(".kmz", ignoreCase = true) ->
-                parseKmz(uri)
+                KmzParser.parse(context, uri)
             fileName.endsWith(".dxf", ignoreCase = true) ->
                 context.contentResolver.openInputStream(uri)?.use { DxfParser.parse(it) }
             else -> throw UnsupportedOperationException("Неизвестный формат: $fileName")
         } ?: emptyList()
         return ImportResult(points, fileName)
-    }
-
-    // KMZ: извлекаем doc.kml из ZIP и парсим через KmlParser
-    private fun parseKmz(uri: Uri): List<WayPoint> {
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            ZipInputStream(input).use { zip ->
-                var entry = zip.nextEntry
-                while (entry != null) {
-                    if (entry.name.equals("doc.kml", ignoreCase = true)) {
-                        return KmlParser.parse(zip.readBytes().inputStream())
-                    }
-                    zip.closeEntry()
-                    entry = zip.nextEntry
-                }
-            }
-        }
-        return emptyList()
     }
 
     fun resolveFileName(uri: Uri): String? {

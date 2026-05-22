@@ -4,6 +4,7 @@ import com.coordscanner.model.WayPoint
 import com.coordscanner.utils.GpxParser
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.util.Locale
@@ -42,8 +43,9 @@ class KmlConversionExporter : FormatExporter {
                 val lon = String.format(Locale.US, "%.8f", p.lon)
                 w.write("  <Placemark>\n")
                 w.write("    <name>${p.name.xmlEscape()}</name>\n")
-                if (!p.description.isNullOrBlank()) {
-                    w.write("    <description><![CDATA[${p.description}]]></description>\n")
+                val desc = buildDescription(p)
+                if (desc != null) {
+                    w.write("    <description><![CDATA[$desc]]></description>\n")
                 }
                 w.write("    <styleUrl>#${styleId(p.color)}</styleUrl>\n")
                 // КРИТИЧНО: сначала lon, потом lat!
@@ -64,24 +66,53 @@ class KmlConversionExporter : FormatExporter {
 
     private fun styleId(hex: String) = "s_${hex.trimStart('#').uppercase(Locale.US)}"
 
+    private fun buildDescription(p: WayPoint): String? {
+        val photoName = p.photoOriginalName ?: p.photoPath?.let { File(it).name }
+        val imgHtml = photoName?.let { "<img src=\"files/$it\">" }
+        val cleanDesc = p.description
+            ?.replace(Regex("""<img[^>]*>""", RegexOption.IGNORE_CASE), "")
+            ?.trim()
+            ?.ifBlank { null }
+        return when {
+            imgHtml != null && cleanDesc != null -> "$imgHtml\n$cleanDesc"
+            imgHtml != null -> imgHtml
+            cleanDesc != null -> cleanDesc
+            else -> null
+        }
+    }
+
     private fun String.xmlEscape() = replace("&", "&amp;")
         .replace("<", "&lt;").replace(">", "&gt;")
         .replace("\"", "&quot;").replace("'", "&apos;")
 }
 
-// Пакует KML в ZIP-архив с именем doc.kml
+// Пакует KML в ZIP-архив с именем doc.kml + фотографии в files/
 class KmzConversionExporter : FormatExporter {
     override fun export(points: List<WayPoint>, out: OutputStream) {
-        // Сначала строим KML в памяти, потом пакуем в ZIP
         val kmlBytes = ByteArrayOutputStream().also { buf ->
             KmlConversionExporter().export(points, buf)
         }.toByteArray()
 
-        // BufferedOutputStream + use{} — гарантирует flush ZIP-архива
         ZipOutputStream(BufferedOutputStream(out)).use { zip ->
             zip.putNextEntry(ZipEntry("doc.kml"))
             zip.write(kmlBytes)
             zip.closeEntry()
+
+            // Пакуем уникальные фото как files/<имя>
+            val seen = mutableSetOf<String>()
+            for (p in points) {
+                val photoPath = p.photoPath ?: continue
+                val photoName = p.photoOriginalName ?: File(photoPath).name
+                if (seen.add(photoName)) {
+                    val photoFile = File(photoPath)
+                    if (photoFile.exists()) {
+                        zip.putNextEntry(ZipEntry("files/$photoName"))
+                        photoFile.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                }
+            }
+
             zip.finish()
         }
     }

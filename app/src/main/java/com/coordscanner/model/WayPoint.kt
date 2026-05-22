@@ -5,6 +5,7 @@ data class WayPoint(
     val lat: Double,
     val lon: Double,
     val color: String = "#FF0000",
-    val photoPath: String? = null,
+    val photoPath: String? = null,         // абсолютный путь к кэшированному фото
+    val photoOriginalName: String? = null, // оригинальное имя файла из ZIP (напр. "photo.jpg")
     val description: String? = null
 )

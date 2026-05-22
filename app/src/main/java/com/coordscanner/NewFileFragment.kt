@@ -5,12 +5,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import com.coordscanner.adapter.WayPointAdapter
 import com.coordscanner.databinding.FragmentNewFileBinding
 import com.coordscanner.utils.FileSaveHelper
@@ -27,7 +29,10 @@ class NewFileFragment : BottomSheetDialogFragment() {
     private var _b: FragmentNewFileBinding? = null
     private val b get() = _b!!
     private val vm: GpxManagerViewModel by activityViewModels()
-    private val adapter = WayPointAdapter { wp -> vm.removeFromNewFile(wp) }
+    private val adapter = WayPointAdapter(
+        onRemove = { wp -> vm.removeFromNewFile(wp) },
+        onPhotoClick = { path -> showPhotoPreview(path) }
+    )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, saved: Bundle?): View {
         _b = FragmentNewFileBinding.inflate(inflater, container, false)
@@ -136,6 +141,16 @@ class NewFileFragment : BottomSheetDialogFragment() {
                 }
             }
         }
+    }
+
+    private fun showPhotoPreview(photoPath: String) {
+        val view = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_photo_preview, null)
+        Glide.with(this).load(File(photoPath)).into(view.findViewById<ImageView>(R.id.ivPhoto))
+        AlertDialog.Builder(requireContext())
+            .setView(view)
+            .setPositiveButton("Закрыть", null)
+            .show()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _b = null }

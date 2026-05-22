@@ -323,6 +323,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
 
     override fun onResume() { super.onResume(); mapView.onResume() }
     override fun onPause()  { super.onPause();  mapView.onPause()  }
+    override fun onDestroy() { super.onDestroy(); java.io.File(cacheDir, "kmz_photos").deleteRecursively() }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 }

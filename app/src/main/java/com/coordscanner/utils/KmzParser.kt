@@ -10,8 +10,9 @@ import java.util.zip.ZipInputStream
 object KmzParser {
 
     fun parse(context: Context, uri: Uri): List<WayPoint> {
-        val photoDir = File(context.cacheDir, "kmz_photos").apply { mkdirs() }
-        photoDir.listFiles()?.forEach { it.delete() }
+        val photoDir = File(context.cacheDir, "kmz_photos")
+        photoDir.deleteRecursively()
+        photoDir.mkdirs()
 
         // Имя-в-zip → абсолютный путь к кэшированному файлу
         val photoMap = mutableMapOf<String, String>()
@@ -41,18 +42,22 @@ object KmzParser {
         }
 
         return kmlBytes?.let { bytes ->
-            // KmlParser даёт цвета, имена, координаты и description
             KmlParser.parse(bytes.inputStream()).map { point ->
-                val photoPath = extractPhotoPath(point.description ?: "", photoMap)
-                if (photoPath != null) point.copy(photoPath = photoPath) else point
+                val photoAbsPath = extractPhotoPath(point.description ?: "", photoMap)
+                if (photoAbsPath != null) {
+                    point.copy(
+                        photoPath = photoAbsPath,
+                        photoOriginalName = File(photoAbsPath).name
+                    )
+                } else point
             }
         } ?: emptyList()
     }
 
-    // Ищем <img src="files/photo.jpg"> в description (может быть в CDATA)
+    // Ищем <img src="..."> или <img href="..."> в description (может быть в CDATA)
     private fun extractPhotoPath(desc: String, photoMap: Map<String, String>): String? {
         if (desc.isBlank()) return null
-        val match = Regex("""<img[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+        val match = Regex("""<img[^>]+(?:src|href)=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
             .find(desc) ?: return null
         val src = match.groupValues[1]
         return photoMap[src] ?: photoMap[src.substringAfterLast('/')]

@@ -2,6 +2,7 @@ package com.coordscanner.adapter
 
 import android.graphics.Color
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -10,7 +11,8 @@ import com.coordscanner.databinding.ItemWaypointBinding
 import com.coordscanner.model.WayPoint
 
 class WayPointAdapter(
-    private val onRemove: (WayPoint) -> Unit
+    private val onRemove: (WayPoint) -> Unit,
+    private val onPhotoClick: ((String) -> Unit)? = null
 ) : ListAdapter<WayPoint, WayPointAdapter.VH>(DIFF) {
 
     inner class VH(val b: ItemWaypointBinding) : RecyclerView.ViewHolder(b.root) {
@@ -21,6 +23,13 @@ class WayPointAdapter(
                 try { Color.parseColor(wp.color) } catch (e: Exception) { Color.RED }
             )
             b.btnRemove.setOnClickListener { onRemove(wp) }
+            if (wp.photoPath != null && onPhotoClick != null) {
+                b.tvPhoto.visibility = View.VISIBLE
+                b.tvPhoto.setOnClickListener { onPhotoClick.invoke(wp.photoPath) }
+            } else {
+                b.tvPhoto.visibility = View.GONE
+                b.tvPhoto.setOnClickListener(null)
+            }
         }
     }
 
