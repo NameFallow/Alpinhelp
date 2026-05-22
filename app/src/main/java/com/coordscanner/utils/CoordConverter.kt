@@ -13,14 +13,63 @@ object CoordConverter {
     private const val A84 = 6378137.0
     private const val F84 = 1.0 / 298.257223563
 
-    // Molodensky shift Pulkovo 1942 → WGS-84 (EPSG:1258, Russia)
+    // 7-parameter Helmert, GOST R 51794-2008 / EPSG:5044
+    // covers Russia + Ukraine (zone 7 = 36°–42°E), accuracy ~1-3 m
+    private const val TX    =  23.57
+    private const val TY    = -140.95
+    private const val TZ    = -79.8
+    private const val RX_AS =   0.0    // arc-seconds
+    private const val RY_AS =  -0.35
+    private const val RZ_AS =  -0.79
+    private const val DS_PPM = -0.22
+
+    // WGS-84 first eccentricity squared
+    private const val E2_84 = 0.00669437999014
+
+    // Legacy 3-parameter values kept for molodenskyPulkovoToWgs84 below
     private const val DX = 25.0
     private const val DY = -141.0
     private const val DZ = -79.0
 
     fun sk42ToWgs84(x: Double, y: Double, zone: Int): Pair<Double, Double> {
         val (lat42, lon42) = gaussKrugerToGeographic(x, y, zone)
-        return molodenskyPulkovoToWgs84(lat42, lon42)
+        return helmertPulkovoToWgs84(lat42, lon42)
+    }
+
+    private fun helmertPulkovoToWgs84(latDeg: Double, lonDeg: Double): Pair<Double, Double> {
+        val phi = Math.toRadians(latDeg)
+        val lam = Math.toRadians(lonDeg)
+        val sinPhi = sin(phi); val cosPhi = cos(phi)
+        val sinLam = sin(lam); val cosLam = cos(lam)
+        val W = sqrt(1.0 - E2 * sinPhi * sinPhi)
+        val N = A / W
+
+        // Krassovsky geocentric XYZ (h = 0)
+        val xK = N * cosPhi * cosLam
+        val yK = N * cosPhi * sinLam
+        val zK = N * (1.0 - E2) * sinPhi
+
+        // Coordinate Frame rotation (EPSG convention)
+        val rxR = RX_AS / 206265.0
+        val ryR = RY_AS / 206265.0
+        val rzR = RZ_AS / 206265.0
+        val sf  = 1.0 + DS_PPM * 1e-6
+
+        val xW = sf * ( xK + rzR * yK - ryR * zK) + TX
+        val yW = sf * (-rzR * xK + yK + rxR * zK) + TY
+        val zW = sf * ( ryR * xK - rxR * yK + zK) + TZ
+
+        // WGS-84 geocentric → geographic (Bowring iteration)
+        val lon84 = atan2(yW, xW)
+        val p = sqrt(xW * xW + yW * yW)
+        var lat84 = atan2(zW, p * (1.0 - E2_84))
+        repeat(10) {
+            val sinL = sin(lat84)
+            val N84 = A84 / sqrt(1.0 - E2_84 * sinL * sinL)
+            lat84 = atan2(zW + E2_84 * N84 * sinL, p)
+        }
+
+        return Pair(Math.toDegrees(lat84), Math.toDegrees(lon84))
     }
 
     fun gaussKrugerToGeographic(x: Double, y: Double, zone: Int): Pair<Double, Double> {
