@@ -16,9 +16,9 @@ object GpxParser {
         }
         val points = mutableListOf<WayPoint>()
         var inWpt = false
-        var inName = false; var inColor = false; var inDesc = false
+        var inName = false; var inColor = false; var inDesc = false; var inSym = false
         var lat = 0.0; var lon = 0.0
-        var name = ""; var color = "#FF0000"; var description = ""
+        var name = ""; var color = "#FF0000"; var description = ""; var sym = ""
 
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
@@ -30,16 +30,18 @@ object GpxParser {
                             ?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
                         lon  = parser.getAttributeValue(null, "lon")
                             ?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
-                        name = ""; color = "#FF0000"; description = ""
+                        name = ""; color = "#FF0000"; description = ""; sym = ""
                         inWpt = true
                     }
                     "name"  -> if (inWpt) inName  = true
                     "desc"  -> if (inWpt) inDesc  = true
                     "color" -> if (inWpt) inColor = true
+                    "sym"   -> if (inWpt) inSym   = true
                 }
                 XmlPullParser.TEXT -> when {
                     inName  -> { name        = parser.text.trim(); inName  = false }
                     inDesc  -> { description = parser.text.trim(); inDesc  = false }
+                    inSym   -> { sym         = parser.text.trim(); inSym   = false }
                     inColor -> {
                         val raw = parser.text.trim()
                         color = if (raw.startsWith("#")) raw else "#$raw"
@@ -47,7 +49,8 @@ object GpxParser {
                     }
                 }
                 XmlPullParser.END_TAG -> if (parser.name == "wpt" && inWpt) {
-                    points.add(WayPoint(name, lat, lon, color, null, description.ifBlank { null }))
+                    points.add(WayPoint(name, lat, lon, color, null, description.ifBlank { null },
+                        symbol = sym.ifBlank { null }))
                     inWpt = false
                 }
             }
@@ -71,7 +74,7 @@ object GpxParser {
             if (!p.description.isNullOrBlank()) {
                 writer.write("    <desc>${p.description.xmlEscape()}</desc>\n")
             }
-            writer.write("    <sym>Circle</sym>\n")
+            writer.write("    <sym>${(p.symbol ?: "Waypoint").xmlEscape()}</sym>\n")
             writer.write("    <type>Waypoint</type>\n")
             writer.write("    <extensions>\n")
             writer.write("      <color>${p.color.xmlEscape()}</color>\n")

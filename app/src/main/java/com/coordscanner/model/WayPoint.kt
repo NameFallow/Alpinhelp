@@ -5,7 +5,9 @@ data class WayPoint(
     val lat: Double,
     val lon: Double,
     val color: String = "#FF0000",
-    val photoPath: String? = null,         // абсолютный путь к кэшированному фото
-    val photoOriginalName: String? = null, // оригинальное имя файла из ZIP (напр. "photo.jpg")
-    val description: String? = null
+    val photoPath: String? = null,
+    val photoOriginalName: String? = null,
+    val description: String? = null,
+    val symbol: String? = null,        // <sym> для GPX или <Icon><href> для KML/KMZ
+    val iconFilePath: String? = null   // абсолютный путь к извлечённому файлу иконки из KMZ
 )

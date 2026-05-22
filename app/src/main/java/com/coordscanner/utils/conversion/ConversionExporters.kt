@@ -22,18 +22,22 @@ class GpxConversionExporter : FormatExporter {
 }
 
 class KmlConversionExporter : FormatExporter {
+
+    private data class StyleKey(val color: String, val symbol: String?)
+
     override fun export(points: List<WayPoint>, out: OutputStream) {
         OutputStreamWriter(out, Charsets.UTF_8).use { w ->
-            val colors = points.map { it.color }.distinct()
+            val styleKeys = points.map { StyleKey(it.color, it.symbol) }.distinct()
 
             w.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
             w.write("<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n<Document>\n")
 
-            // Style-блоки для каждого уникального цвета
-            for (hex in colors) {
-                w.write("  <Style id=\"${styleId(hex)}\">\n")
-                w.write("    <IconStyle><color>${hexToKmlColor(hex)}</color>\n")
-                w.write("      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon>\n")
+            // Style-блоки: уникальная пара (цвет, ярлык)
+            for (sk in styleKeys) {
+                w.write("  <Style id=\"${styleId(sk.color, sk.symbol)}\">\n")
+                w.write("    <IconStyle><color>${hexToKmlColor(sk.color)}</color>\n")
+                val href = sk.symbol ?: "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png"
+                w.write("      <Icon><href>$href</href></Icon>\n")
                 w.write("    </IconStyle>\n  </Style>\n")
             }
 
@@ -47,7 +51,7 @@ class KmlConversionExporter : FormatExporter {
                 if (desc != null) {
                     w.write("    <description><![CDATA[$desc]]></description>\n")
                 }
-                w.write("    <styleUrl>#${styleId(p.color)}</styleUrl>\n")
+                w.write("    <styleUrl>#${styleId(p.color, p.symbol)}</styleUrl>\n")
                 // КРИТИЧНО: сначала lon, потом lat!
                 w.write("    <Point><coordinates>$lon,$lat,0</coordinates></Point>\n")
                 w.write("  </Placemark>\n")
@@ -64,7 +68,13 @@ class KmlConversionExporter : FormatExporter {
         return "ff${c.substring(4, 6)}${c.substring(2, 4)}${c.substring(0, 2)}"
     }
 
-    private fun styleId(hex: String) = "s_${hex.trimStart('#').uppercase(Locale.US)}"
+    private fun styleId(hex: String, symbol: String? = null): String {
+        val base = "s_${hex.trimStart('#').uppercase(Locale.US)}"
+        if (symbol == null) return base
+        val suffix = symbol.substringAfterLast('/').substringBeforeLast('.')
+            .replace(Regex("[^A-Za-z0-9_]"), "_").take(32)
+        return "${base}_$suffix"
+    }
 
     private fun buildDescription(p: WayPoint): String? {
         val photoName = p.photoOriginalName ?: p.photoPath?.let { File(it).name }
@@ -86,7 +96,7 @@ class KmlConversionExporter : FormatExporter {
         .replace("\"", "&quot;").replace("'", "&apos;")
 }
 
-// Пакует KML в ZIP-архив с именем doc.kml + фотографии в files/
+// Пакует KML в ZIP-архив с именем doc.kml + фотографии и иконки в files/
 class KmzConversionExporter : FormatExporter {
     override fun export(points: List<WayPoint>, out: OutputStream) {
         val kmlBytes = ByteArrayOutputStream().also { buf ->
@@ -98,16 +108,33 @@ class KmzConversionExporter : FormatExporter {
             zip.write(kmlBytes)
             zip.closeEntry()
 
+            val seenEntries = mutableSetOf<String>()
+
             // Пакуем уникальные фото как files/<имя>
-            val seen = mutableSetOf<String>()
             for (p in points) {
                 val photoPath = p.photoPath ?: continue
                 val photoName = p.photoOriginalName ?: File(photoPath).name
-                if (seen.add(photoName)) {
+                val entry = "files/$photoName"
+                if (seenEntries.add(entry)) {
                     val photoFile = File(photoPath)
                     if (photoFile.exists()) {
-                        zip.putNextEntry(ZipEntry("files/$photoName"))
+                        zip.putNextEntry(ZipEntry(entry))
                         photoFile.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                }
+            }
+
+            // Пакуем иконки, сохраняя оригинальный путь из symbol (напр. "files/aq_wpt_circle.png")
+            for (p in points) {
+                val iconPath = p.iconFilePath ?: continue
+                val symbol   = p.symbol ?: continue
+                val entry = if (symbol.contains('/')) symbol else "files/${symbol.substringAfterLast('/')}"
+                if (seenEntries.add(entry)) {
+                    val iconFile = File(iconPath)
+                    if (iconFile.exists()) {
+                        zip.putNextEntry(ZipEntry(entry))
+                        iconFile.inputStream().use { it.copyTo(zip) }
                         zip.closeEntry()
                     }
                 }
