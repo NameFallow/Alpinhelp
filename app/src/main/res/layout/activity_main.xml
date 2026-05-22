@@ -111,6 +111,20 @@
                 app:strokeColor="#FF8800"
                 app:strokeWidth="1dp"
                 android:textColor="#FF8800" />
+
+            <!-- GPX Менеджер: открытие, просмотр на карте, вырезка точек -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGpxManager"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="4dp"
+                android:text="GPX Менеджер"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium"
+                app:backgroundTint="@color/navy_surface"
+                app:strokeColor="@color/accent"
+                app:strokeWidth="1dp"
+                android:textColor="@color/accent" />
         </LinearLayout>
 
         <!-- Divider -->
