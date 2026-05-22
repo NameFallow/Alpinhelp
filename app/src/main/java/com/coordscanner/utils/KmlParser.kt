@@ -62,6 +62,8 @@ object KmlParser {
                     "Placemark" -> {
                         inPlacemark = true
                         name = ""; coordsText = ""; styleUrl = ""; inlineColor = ""
+                        inPoint = false; inName = false; inCoords = false
+                        inStyleUrl = false; inIconStyle = false; inColor = false
                     }
                     "Point"       -> if (inPlacemark) inPoint     = true
                     "name"        -> if (inPlacemark) inName      = true

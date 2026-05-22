@@ -9,8 +9,8 @@
         android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    <!-- Android 11+: полный доступ к хранилищу если нужно читать внешние папки напрямую -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <!-- Android 13+ (API 33+): гранулярный доступ к медиафайлам вместо READ_EXTERNAL_STORAGE -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 

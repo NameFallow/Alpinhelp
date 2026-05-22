@@ -3,6 +3,7 @@ package com.coordscanner
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.util.LruCache
 import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
@@ -39,7 +40,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     private lateinit var mapView: MapView
     private var markersOverlay = FolderOverlay()
     private var selectionOverlay: MapSelectionOverlay? = null
-    private val iconCache = mutableMapOf<String, Drawable>()
+    private val iconCache = LruCache<String, Drawable>(32)
 
     private var isSelectMode = false
     private var isAddMode = false
@@ -212,25 +213,24 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     }
 
     private fun getMarkerIcon(colorKey: String): Drawable {
-        return iconCache.getOrPut(colorKey) {
-            val color = when (colorKey) {
-                "SELECTED" -> Color.YELLOW
-                else -> try { Color.parseColor(colorKey) } catch (e: Exception) { Color.RED }
-            }
-            val dp = resources.displayMetrics.density
-            val r  = (dp * 8).toInt()
-            val sz = r * 2
-            val bmp = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bmp)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-            paint.color = color
-            canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
-            paint.color = Color.WHITE
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 1.5f
-            canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
-            BitmapDrawable(resources, bmp)
+        iconCache[colorKey]?.let { return it }
+        val color = when (colorKey) {
+            "SELECTED" -> Color.YELLOW
+            else -> try { Color.parseColor(colorKey) } catch (e: Exception) { Color.RED }
         }
+        val dp = resources.displayMetrics.density
+        val r  = (dp * 8).toInt()
+        val sz = r * 2
+        val bmp = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.color = color
+        canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
+        paint.color = Color.WHITE
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1.5f
+        canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
+        return BitmapDrawable(resources, bmp).also { iconCache.put(colorKey, it) }
     }
 
     // --- Загрузка файла любого формата через FileImporter ---

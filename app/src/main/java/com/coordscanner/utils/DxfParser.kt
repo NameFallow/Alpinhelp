@@ -11,7 +11,7 @@ object DxfParser {
         var i = 0
         var inEntities = false
 
-        while (i < lines.size - 1) {
+        while (i + 1 < lines.size) {
             val code  = lines[i].trim()
             val value = lines[i + 1].trim()
 
@@ -30,7 +30,7 @@ object DxfParser {
                 inEntities && code == "0" && value.equals("POINT", ignoreCase = true) -> {
                     i += 2
                     var lon = 0.0; var lat = 0.0; var name = ""
-                    while (i < lines.size - 1) {
+                    while (i + 1 < lines.size) {
                         val c = lines[i].trim()
                         val v = lines[i + 1].trim()
                         if (c == "0") break  // начало следующего объекта

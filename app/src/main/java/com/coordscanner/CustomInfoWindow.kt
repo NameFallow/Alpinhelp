@@ -32,6 +32,8 @@ class CustomInfoWindow(
     }
 
     override fun onClose() {
-        // Glide освобождает ImageView автоматически при detach
+        // Отменяем загрузку если фото ещё не успело загрузиться
+        val ivPhoto = mView?.findViewById<android.widget.ImageView>(R.id.ivPointPhoto) ?: return
+        com.bumptech.glide.Glide.with(mMapView.context).clear(ivPhoto)
     }
 }

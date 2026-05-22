@@ -11,7 +11,7 @@ object GpxParser {
     fun parse(stream: InputStream): List<WayPoint> {
         val parser = Xml.newPullParser().apply {
             setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-            setInput(stream, null)
+            setInput(stream, "UTF-8")
         }
         val points = mutableListOf<WayPoint>()
         var inWpt = false; var inName = false; var inColor = false
