@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/navy_surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/pill_handle" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Сохранить как:"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Выбор формата -->
+        <RadioGroup
+            android:id="@+id/rgFormat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp">
+
+            <RadioButton
+                android:id="@+id/rbKmz"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="⭐  KMZ  —  Google Earth / AlpineQuest"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:checked="true"
+                android:paddingStart="8dp" />
+
+            <RadioButton
+                android:id="@+id/rbGpx"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="      GPX  —  треки и метки"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:paddingStart="8dp" />
+
+            <RadioButton
+                android:id="@+id/rbKml"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="      KML  —  Google Earth"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:paddingStart="8dp" />
+
+            <RadioButton
+                android:id="@+id/rbDxf"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="      DXF  —  AutoCAD / QGIS"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:paddingStart="8dp" />
+
+        </RadioGroup>
+
+        <!-- Чекбокс "сохранить все форматы" -->
+        <CheckBox
+            android:id="@+id/cbSaveAll"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="☑ Сохранить сразу все форматы"
+            android:textColor="@color/accent"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Поле имени файла -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Имя файла"
+            android:layout_marginBottom="16dp"
+            app:boxStrokeColor="@color/navy_stroke"
+            app:hintTextColor="@color/text_secondary">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFileName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="@color/text_primary" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Кнопка Сохранить -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginBottom="8dp"
+            android:text="💾  СОХРАНИТЬ"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/scanner_green" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Отмена"
+            android:textColor="@color/text_secondary" />
+
+    </LinearLayout>
+</ScrollView>

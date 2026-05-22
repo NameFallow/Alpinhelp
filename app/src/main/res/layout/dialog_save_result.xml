@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/navy_surface">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✅ Сохранено!"
+        android:textColor="@color/scanner_green"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Список сохранённых файлов с размерами -->
+    <TextView
+        android:id="@+id/tvFileList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        android:lineSpacingMultiplier="1.6"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📁 Downloads/CoordScanner"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Поделиться KMZ (скрыт если нет KMZ) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShareKmz"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginBottom="8dp"
+        android:text="📤 Поделиться KMZ"
+        android:textSize="14sp"
+        app:backgroundTint="@color/primary" />
+
+    <!-- Поделиться всеми (скрыт если только один файл) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShareAll"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginBottom="8dp"
+        android:text="📤 Поделиться все"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        app:strokeColor="@color/navy_stroke" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDone"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="✓ Готово"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+</LinearLayout>

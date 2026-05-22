@@ -100,7 +100,7 @@
             android:layout_height="42dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
-            android:text="💾 Сохранить GPX"
+            android:text="💾 Сохранить"
             android:textSize="12sp"
             android:enabled="false"
             app:backgroundTint="@color/scanner_green" />

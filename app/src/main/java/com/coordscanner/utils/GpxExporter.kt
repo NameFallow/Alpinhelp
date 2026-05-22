@@ -6,8 +6,9 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import android.util.Log
 import com.coordscanner.model.Point
+import java.io.BufferedWriter
 import java.io.File
-import java.io.FileWriter
+import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.Locale
@@ -73,7 +74,14 @@ object GpxExporter {
         // Delete old exports so AlpineQuest can't serve a cached version of a stale URI.
         dir.listFiles()?.forEach { it.delete() }
         val file = File(dir, "coordscanner_${System.currentTimeMillis()}.gpx")
-        FileWriter(file).use { it.write(content) }
+        // OutputStreamWriter с явным UTF-8 + flush внутри use{} — гарантирует запись
+        file.outputStream().use { fos ->
+            BufferedWriter(OutputStreamWriter(fos, Charsets.UTF_8)).use { w ->
+                w.write(content)
+                w.flush()
+            }
+        }
+        if (file.length() == 0L) throw Exception("GPX файл пустой после записи")
         return file
     }
 
