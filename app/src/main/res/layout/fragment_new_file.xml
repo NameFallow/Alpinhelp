@@ -5,17 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="20dp"
     android:background="@color/navy_surface">
 
+    <!-- Ручка -->
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="14dp"
         android:background="@drawable/pill_handle" />
 
-    <!-- Заголовок и счётчик буфера -->
+    <!-- Заголовок + счётчики -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -27,37 +30,64 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Новый файл меток"
+            android:text="Новый файл"
             android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textSize="17sp"
+            android:fontFamily="sans-serif-medium" />
 
-        <TextView
-            android:id="@+id/tvBuffer"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Буфер: 0"
-            android:textColor="@color/accent"
-            android:textSize="12sp"
-            android:layout_marginEnd="8dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/tvCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Точек в файле: 0"
-            android:textColor="@color/scanner_green"
-            android:textSize="12sp" />
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="@color/accent"
+                android:layout_marginEnd="4dp" />
+
+            <TextView
+                android:id="@+id/tvBuffer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Буфер: 0"
+                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:layout_marginEnd="12dp" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/color_circle"
+                android:backgroundTint="@color/scanner_green"
+                android:layout_marginEnd="4dp" />
+
+            <TextView
+                android:id="@+id/tvCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="В файле: 0"
+                android:textColor="@color/scanner_green"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/navy_stroke"
+        android:layout_marginBottom="10dp" />
 
     <!-- Список точек нового файла -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPoints"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="200dp"
         android:layout_marginBottom="12dp" />
 
-    <!-- Кнопки действий -->
+    <!-- Вставить + Очистить -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -66,28 +96,37 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPaste"
-            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="44dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
-            android:text="📥 Вставить"
-            android:textSize="12sp"
+            android:text="Вставить"
+            android:textSize="13sp"
             android:enabled="false"
-            app:backgroundTint="@color/primary" />
+            app:icon="@drawable/ic_convert"
+            app:iconSize="18dp"
+            app:iconPadding="6dp"
+            app:backgroundTint="@color/primary"
+            app:cornerRadius="10dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="44dp"
             android:layout_weight="1"
-            android:text="🗑️ Очистить"
-            android:textSize="12sp"
+            android:text="Очистить"
+            android:textSize="13sp"
             android:textColor="@color/red_delete"
-            app:strokeColor="@color/red_delete" />
+            app:icon="@drawable/ic_trash"
+            app:iconSize="18dp"
+            app:iconPadding="6dp"
+            app:iconTint="@color/red_delete"
+            app:strokeColor="#55EF5350"
+            app:cornerRadius="10dp" />
     </LinearLayout>
 
+    <!-- Сохранить + Поделиться -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -95,27 +134,28 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
-            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="44dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
-            android:text="💾 Сохранить"
-            android:textSize="12sp"
+            android:text="Сохранить"
+            android:textSize="13sp"
             android:enabled="false"
-            app:backgroundTint="@color/scanner_green" />
+            app:backgroundTint="@color/scanner_green"
+            app:cornerRadius="10dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnShare"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="42dp"
+            android:layout_height="44dp"
             android:layout_weight="1"
-            android:text="📤 Поделиться"
-            android:textSize="12sp"
+            android:text="Поделиться"
+            android:textSize="13sp"
             android:textColor="@color/accent"
             android:enabled="false"
-            app:strokeColor="@color/accent" />
+            app:strokeColor="#5500BCD4"
+            app:cornerRadius="10dp" />
     </LinearLayout>
 
 </LinearLayout>

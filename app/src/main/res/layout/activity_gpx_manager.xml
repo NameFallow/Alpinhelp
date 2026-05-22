@@ -5,179 +5,262 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Полноэкранная карта OSMDroid -->
+    <!-- Полноэкранная карта -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Верхняя панель: назад + счётчики -->
+    <!-- ═══ ВЕРХНИЕ КОНТРОЛЫ (floating overlay) ═══ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:background="#DD08111E"
-        android:orientation="horizontal"
-        android:paddingStart="4dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:gravity="center_vertical">
+        android:orientation="vertical">
 
-        <ImageButton
-            android:id="@+id/btnBack"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:src="@drawable/ic_arrow_back"
-            android:tint="@color/white"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Назад" />
+        <!-- Строка 1: навигация + заголовок + слои -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#EE08111E"
+            android:paddingStart="4dp"
+            android:paddingEnd="10dp">
 
-        <TextView
-            android:layout_width="0dp"
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:src="@drawable/ic_arrow_back"
+                android:tint="@color/white"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Назад" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GPX Менеджер"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="1dp">
+
+                    <TextView
+                        android:id="@+id/tvLoadedCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Точек: 0"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvSelectedCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" • Выбрано: 0"
+                        android:textColor="@color/accent"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Кнопка слоёв карты -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLayers"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:padding="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                app:icon="@drawable/ic_layers"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                android:text=""
+                android:textColor="@color/text_secondary"
+                app:strokeColor="@color/navy_stroke"
+                app:cornerRadius="10dp"
+                app:backgroundTint="@color/navy_surface" />
+        </LinearLayout>
+
+        <!-- Строка 2: кнопки действий -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="GPX Менеджер"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginStart="4dp" />
+            android:orientation="horizontal"
+            android:background="#CC08111E"
+            android:paddingHorizontal="10dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="8dp">
 
-        <TextView
-            android:id="@+id/tvLoadedCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Точек: 0"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:layout_marginEnd="6dp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOpenFile"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_weight="1"
+                android:text="Открыть файл"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                app:icon="@drawable/ic_file_open"
+                app:iconSize="18dp"
+                app:iconPadding="6dp"
+                app:backgroundTint="@color/primary"
+                app:cornerRadius="10dp" />
 
-        <TextView
-            android:id="@+id/tvSelectedCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Выбрано: 0"
-            android:textColor="@color/accent"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:layout_marginEnd="6dp"
-            android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectArea"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="Выделить"
+                android:textSize="12sp"
+                android:textColor="@color/accent"
+                app:icon="@drawable/ic_select_area"
+                app:iconSize="16dp"
+                app:iconPadding="5dp"
+                app:iconTint="@color/accent"
+                app:strokeColor="#5500BCD4"
+                app:cornerRadius="10dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLayers"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:text="🗺"
-            android:textSize="14sp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="8dp"
-            android:textColor="@color/text_secondary"
-            app:strokeColor="@color/navy_stroke" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddArea"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginStart="6dp"
+                android:text="+ Область"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                app:strokeColor="@color/navy_stroke"
+                app:cornerRadius="10dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Разделитель -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/navy_stroke" />
     </LinearLayout>
 
-    <!-- Строка кнопок режима -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_marginTop="52dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
-        android:paddingBottom="4dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpenFile"
-            style="@style/Widget.MaterialComponents.Button"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:text="📂 Открыть файл"
-            android:textSize="11sp"
-            app:backgroundTint="@color/primary" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSelectArea"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:text="Выделить область"
-            android:textSize="11sp"
-            android:textColor="@color/accent"
-            app:strokeColor="@color/accent" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAddArea"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:text="+ Область"
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary"
-            app:strokeColor="@color/navy_stroke"
-            android:visibility="gone" />
-    </LinearLayout>
-
-    <!-- Нижняя панель: буфер + новый файл -->
+    <!-- ═══ НИЖНЯЯ ПАНЕЛЬ (floating card) ═══ -->
     <com.google.android.material.card.MaterialCardView
-        style="@style/CardStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_margin="8dp"
-        app:cardCornerRadius="16dp">
+        android:layout_margin="10dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/navy_surface"
+        app:strokeColor="@color/navy_stroke"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="10dp">
+            android:paddingStart="16dp"
+            android:paddingEnd="10dp"
+            android:paddingVertical="12dp">
 
-            <TextView
-                android:id="@+id/tvBufferCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Буфер: 0"
-                android:textColor="@color/accent"
-                android:textSize="12sp"
-                android:layout_marginEnd="12dp" />
-
-            <TextView
-                android:id="@+id/tvNewFileCount"
+            <!-- Счётчики: буфер + файл -->
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="В файле: 0"
-                android:textColor="@color/scanner_green"
-                android:textSize="12sp" />
+                android:orientation="vertical">
 
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/color_circle"
+                        android:backgroundTint="@color/accent"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/tvBufferCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Буфер: 0"
+                        android:textColor="@color/accent"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/color_circle"
+                        android:backgroundTint="@color/scanner_green"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/tvNewFileCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="В файле: 0"
+                        android:textColor="@color/scanner_green"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Кнопки действий -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPaste"
-                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
+                android:layout_height="38dp"
                 android:layout_marginEnd="6dp"
-                android:text="📥 Вставить"
-                android:textSize="11sp"
+                android:text="Вставить"
+                android:textSize="12sp"
                 android:enabled="false"
-                app:backgroundTint="@color/primary" />
+                android:minWidth="0dp"
+                app:backgroundTint="@color/primary"
+                app:cornerRadius="10dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnManageFile"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:text="📄 Файл ▼"
-                android:textSize="11sp"
+                android:layout_height="38dp"
+                android:text="Файл ▼"
+                android:textSize="12sp"
                 android:textColor="@color/text_secondary"
-                app:strokeColor="@color/navy_stroke" />
+                android:minWidth="0dp"
+                app:strokeColor="@color/navy_stroke"
+                app:cornerRadius="10dp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

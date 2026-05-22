@@ -5,50 +5,46 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Mountain silhouette -->
+    <!-- Левая грань горы (светлая, освещённая) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,22 L30,68 L78,68 Z" />
+        android:pathData="M44,22 L20,74 L44,74 Z" />
 
-    <!-- Snow cap -->
+    <!-- Правая грань горы (тень, серо-голубая) -->
+    <path
+        android:fillColor="#C8D8E8"
+        android:pathData="M44,22 L44,74 L68,74 Z" />
+
+    <!-- Снежная шапка левая (голубоватая) -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M44,22 L33,42 L44,42 Z" />
+
+    <!-- Снежная шапка правая (чуть темнее) -->
     <path
         android:fillColor="#BBDEFB"
-        android:pathData="M54,22 L44,40 L64,40 Z" />
+        android:pathData="M44,22 L44,42 L55,42 Z" />
 
-    <!-- GPS circle (drawn as path) -->
+    <!-- GPS-пин: тело (tearDrop, цвет #00E5FF) -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
-        android:fillColor="#00000000"
-        android:pathData="M64,76 A10,10 0 1,0 64.001,76 Z" />
+        android:fillColor="#00E5FF"
+        android:pathData="M76,36 C87,36 87,56 76,62 C65,56 65,36 76,36 Z" />
 
-    <!-- Crosshair top -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:pathData="M54,63 L54,69" />
-
-    <!-- Crosshair bottom -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:pathData="M54,83 L54,89" />
-
-    <!-- Crosshair left -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:pathData="M40,76 L46,76" />
-
-    <!-- Crosshair right -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:pathData="M62,76 L68,76" />
-
-    <!-- Center dot -->
+    <!-- GPS-пин: белое кольцо внутри -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,76 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+        android:pathData="M76,44 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+
+    <!-- GPS-пин: тёмная точка в центре -->
+    <path
+        android:fillColor="#07152A"
+        android:pathData="M76,44 m-2.8,0 a2.8,2.8 0 1,0 5.6,0 a2.8,2.8 0 1,0 -5.6,0" />
+
+    <!-- Контурная линия горизонта (лёгкая текстура) -->
+    <path
+        android:strokeColor="#33FFFFFF"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:pathData="M16,82 Q30,76 44,74 Q56,76 70,82" />
 
 </vector>

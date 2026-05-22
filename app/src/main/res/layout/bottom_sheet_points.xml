@@ -5,9 +5,12 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="20dp"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="24dp"
     android:background="@color/navy_surface">
 
+    <!-- Ручка -->
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
@@ -15,44 +18,68 @@
         android:layout_marginBottom="16dp"
         android:background="@drawable/pill_handle" />
 
+    <!-- Заголовок -->
     <TextView
         android:id="@+id/tvSelectionInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Выбрано: 0 точек"
         android:textColor="@color/text_primary"
-        android:textSize="17sp"
-        android:textStyle="bold"
+        android:textSize="18sp"
+        android:fontFamily="sans-serif-medium"
         android:gravity="center"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="6dp" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/navy_stroke"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Вырезать (primary action) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCut"
-        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginBottom="10dp"
-        android:text="✂️  Вырезать"
-        android:textSize="14sp"
-        app:backgroundTint="@color/primary" />
+        android:layout_height="52dp"
+        android:layout_marginBottom="8dp"
+        android:text="Вырезать"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif-medium"
+        app:icon="@drawable/ic_cut"
+        app:iconSize="20dp"
+        app:iconPadding="10dp"
+        app:backgroundTint="@color/primary"
+        app:cornerRadius="12dp" />
 
+    <!-- Копировать -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCopy"
-        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginBottom="10dp"
-        android:text="📋  Копировать"
-        android:textSize="14sp"
-        app:backgroundTint="@color/primary_variant" />
+        android:layout_height="52dp"
+        android:layout_marginBottom="8dp"
+        android:text="Копировать"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif-medium"
+        app:icon="@drawable/ic_copy"
+        app:iconSize="20dp"
+        app:iconPadding="10dp"
+        app:backgroundTint="@color/primary_variant"
+        app:cornerRadius="12dp" />
 
+    <!-- Удалить -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnDelete"
-        style="@style/Widget.MaterialComponents.Button"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="🗑️  Удалить"
-        android:textSize="14sp"
-        app:backgroundTint="@color/red_delete" />
+        android:layout_height="52dp"
+        android:text="Удалить"
+        android:textSize="15sp"
+        android:textColor="@color/red_delete"
+        app:icon="@drawable/ic_trash"
+        app:iconSize="20dp"
+        app:iconPadding="10dp"
+        app:iconTint="@color/red_delete"
+        app:strokeColor="@color/red_delete"
+        app:cornerRadius="12dp" />
 
 </LinearLayout>
