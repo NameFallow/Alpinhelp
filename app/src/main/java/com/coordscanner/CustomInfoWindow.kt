@@ -4,14 +4,14 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import com.bumptech.glide.Glide
-import com.coordscanner.utils.KmzPoint
+import com.coordscanner.model.WayPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.infowindow.InfoWindow
 import java.io.File
 
 class CustomInfoWindow(
     mapView: MapView,
-    private val point: KmzPoint
+    private val point: WayPoint
 ) : InfoWindow(R.layout.info_window_kmz, mapView) {
 
     override fun onOpen(item: Any?) {

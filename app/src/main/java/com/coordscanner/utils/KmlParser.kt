@@ -9,11 +9,11 @@ object KmlParser {
 
     fun parse(stream: InputStream): List<WayPoint> {
         val bytes = stream.readBytes()
-        val styles = collectStyles(bytes)     // первый проход: id → #RRGGBB
-        return collectPlacemarks(bytes, styles) // второй проход: точки
+        val styles = collectStyles(bytes)
+        return collectPlacemarks(bytes, styles)
     }
 
-    // Собираем все <Style id="..."><IconStyle><color>AABBGGRR</color>
+    // Первый проход: Style id → #RRGGBB
     private fun collectStyles(kml: ByteArray): Map<String, String> {
         val result = mutableMapOf<String, String>()
         val p = newParser(kml)
@@ -43,17 +43,17 @@ object KmlParser {
         return result
     }
 
-    // Парсим <Placemark>: имя, координаты, цвет (inline или по styleUrl)
+    // Второй проход: Placemark → WayPoint (имя, координаты, цвет, описание)
     private fun collectPlacemarks(kml: ByteArray, styles: Map<String, String>): List<WayPoint> {
         val points = mutableListOf<WayPoint>()
         val p = newParser(kml)
 
         var inPlacemark = false
         var inPoint = false
-        var inName = false; var inCoords = false
-        var inStyleUrl = false
-        var inIconStyle = false; var inColor = false
-        var name = ""; var coordsText = ""; var styleUrl = ""; var inlineColor = ""
+        var inName = false; var inCoords = false; var inDesc = false
+        var inStyleUrl = false; var inIconStyle = false; var inColor = false
+        var name = ""; var coordsText = ""; var styleUrl = ""
+        var inlineColor = ""; var description = ""
 
         var ev = p.eventType
         while (ev != XmlPullParser.END_DOCUMENT) {
@@ -61,13 +61,16 @@ object KmlParser {
                 XmlPullParser.START_TAG -> when (p.name) {
                     "Placemark" -> {
                         inPlacemark = true
-                        name = ""; coordsText = ""; styleUrl = ""; inlineColor = ""
+                        name = ""; coordsText = ""; styleUrl = ""
+                        inlineColor = ""; description = ""
                         inPoint = false; inName = false; inCoords = false
-                        inStyleUrl = false; inIconStyle = false; inColor = false
+                        inDesc = false; inStyleUrl = false
+                        inIconStyle = false; inColor = false
                     }
                     "Point"       -> if (inPlacemark) inPoint     = true
                     "name"        -> if (inPlacemark) inName      = true
                     "coordinates" -> if (inPlacemark && inPoint) inCoords = true
+                    "description" -> if (inPlacemark) inDesc      = true
                     "styleUrl"    -> if (inPlacemark) inStyleUrl  = true
                     "IconStyle"   -> if (inPlacemark) inIconStyle = true
                     "color"       -> if (inPlacemark && inIconStyle) inColor = true
@@ -75,6 +78,7 @@ object KmlParser {
                 XmlPullParser.TEXT -> when {
                     inName      -> { name        = p.text.trim(); inName      = false }
                     inCoords    -> { coordsText  = p.text.trim(); inCoords    = false }
+                    inDesc      -> { description = p.text.trim(); inDesc      = false }
                     inStyleUrl  -> { styleUrl    = p.text.trim().trimStart('#'); inStyleUrl = false }
                     inColor     -> { inlineColor = p.text.trim(); inColor     = false }
                 }
@@ -89,7 +93,13 @@ object KmlParser {
                                 styleUrl.isNotBlank()    -> styles[styleUrl] ?: "#FF0000"
                                 else                     -> "#FF0000"
                             }
-                            points.add(WayPoint(lat, lon, name.ifBlank { "Точка ${points.size + 1}" }, color))
+                            points.add(WayPoint(
+                                name        = name.ifBlank { "Точка ${points.size + 1}" },
+                                lat         = lat,
+                                lon         = lon,
+                                color       = color,
+                                description = description.ifBlank { null }
+                            ))
                         }
                         inPlacemark = false
                     }
@@ -104,8 +114,8 @@ object KmlParser {
     private fun parseCoords(text: String): Pair<Double, Double> {
         val parts = text.trim().split(Regex("[,\\s]+"))
         if (parts.size < 2) return 0.0 to 0.0
-        val lon = parts[0].toDoubleOrNull() ?: return 0.0 to 0.0
-        val lat = parts[1].toDoubleOrNull() ?: return 0.0 to 0.0
+        val lon = parts[0].replace(",", ".").toDoubleOrNull() ?: return 0.0 to 0.0
+        val lat = parts[1].replace(",", ".").toDoubleOrNull() ?: return 0.0 to 0.0
         return lat to lon
     }
 

@@ -6,7 +6,7 @@ import java.io.InputStream
 object DxfParser {
 
     fun parse(stream: InputStream): List<WayPoint> {
-        val lines = stream.bufferedReader().readLines()
+        val lines = stream.bufferedReader(Charsets.UTF_8).readLines()
         val points = mutableListOf<WayPoint>()
         var i = 0
         var inEntities = false
@@ -16,39 +16,38 @@ object DxfParser {
             val value = lines[i + 1].trim()
 
             when {
-                // Вход в секцию ENTITIES
                 code == "2" && value.equals("ENTITIES", ignoreCase = true) -> {
                     inEntities = true
                     i += 2
                 }
-                // Конец секции
                 code == "0" && value.equals("ENDSEC", ignoreCase = true) -> {
                     if (inEntities) break
                     i += 2
                 }
-                // Объект POINT внутри ENTITIES
                 inEntities && code == "0" && value.equals("POINT", ignoreCase = true) -> {
                     i += 2
+                    // DXF: код 10 = X = longitude, код 20 = Y = latitude
                     var lon = 0.0; var lat = 0.0; var name = ""
                     while (i + 1 < lines.size) {
                         val c = lines[i].trim()
                         val v = lines[i + 1].trim()
-                        if (c == "0") break  // начало следующего объекта
+                        if (c == "0") break
                         when (c) {
-                            "10" -> lon  = v.toDoubleOrNull() ?: lon
-                            "20" -> lat  = v.toDoubleOrNull() ?: lat
+                            // Защита от запятой как десятичного разделителя
+                            "10" -> lon  = v.replace(",", ".").toDoubleOrNull() ?: lon
+                            "20" -> lat  = v.replace(",", ".").toDoubleOrNull() ?: lat
                             "1"  -> name = v
                         }
                         i += 2
                     }
                     if (lat != 0.0 || lon != 0.0) {
                         points.add(WayPoint(
+                            name = name.ifBlank { "Точка ${points.size + 1}" },
                             lat  = lat,
-                            lon  = lon,
-                            name = name.ifBlank { "Точка ${points.size + 1}" }
+                            lon  = lon
                         ))
                     }
-                    // i уже указывает на следующий "0" — не инкрементировать
+                    // i уже на следующем "0" — не инкрементировать
                 }
                 else -> i += 2
             }

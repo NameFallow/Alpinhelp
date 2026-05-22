@@ -16,7 +16,6 @@ import com.coordscanner.databinding.ActivityKmzMapBinding
 import com.coordscanner.model.WayPoint
 import com.coordscanner.utils.GpxParser
 import com.coordscanner.utils.KmzParser
-import com.coordscanner.utils.KmzPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,14 +28,13 @@ import org.osmdroid.views.overlay.FolderOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.infowindow.InfoWindow
 import java.io.File
-import java.io.FileWriter
 
 class KmzMapActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityKmzMapBinding
     private lateinit var mapView: MapView
     private var markersOverlay = FolderOverlay()
-    private var loadedPoints: List<KmzPoint> = emptyList()
+    private var loadedPoints: List<WayPoint> = emptyList()
 
     private val openKmzLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -99,7 +97,7 @@ class KmzMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun showMarkers(points: List<KmzPoint>) {
+    private fun showMarkers(points: List<WayPoint>) {
         mapView.overlays.remove(markersOverlay)
         markersOverlay = FolderOverlay()
 
@@ -124,11 +122,11 @@ class KmzMapActivity : AppCompatActivity() {
     private fun convertAndShareGpx() {
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
-                val wayPoints = loadedPoints.map { WayPoint(lat = it.lat, lon = it.lon, name = it.name) }
                 val dir = File(cacheDir, "gpx").apply { mkdirs() }
                 dir.listFiles()?.forEach { it.delete() }
                 val file = File(dir, "kmz_export_${System.currentTimeMillis()}.gpx")
-                FileWriter(file).use { GpxParser.write(wayPoints, it) }
+                java.io.OutputStreamWriter(java.io.FileOutputStream(file), Charsets.UTF_8)
+                    .use { GpxParser.write(loadedPoints, it) }
                 file
             }.onSuccess { file ->
                 withContext(Dispatchers.Main) { shareGpxFile(file) }
