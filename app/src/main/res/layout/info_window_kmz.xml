@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#EE0F1E30"
+    android:minWidth="200dp"
+    android:maxWidth="280dp"
+    android:padding="4dp">
+
+    <!-- Заголовок: название точки + кнопка закрытия -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/tvPointName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <ImageButton
+            android:id="@+id/btnCloseInfo"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#8BB4D8"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Закрыть" />
+    </LinearLayout>
+
+    <!-- Фото точки (скрыто если нет фото) -->
+    <ImageView
+        android:id="@+id/ivPointPhoto"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scaleType="centerCrop"
+        android:layout_marginTop="2dp"
+        android:visibility="gone" />
+
+    <!-- Маленький треугольник-хвостик снизу имитируем отступом -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:background="#EE0F1E30" />
+
+</LinearLayout>

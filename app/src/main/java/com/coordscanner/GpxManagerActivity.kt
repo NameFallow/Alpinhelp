@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.coordscanner.databinding.ActivityGpxManagerBinding
 import com.coordscanner.model.WayPoint
+import com.coordscanner.utils.FilePickerHelper
 import com.coordscanner.utils.GpxParser
 import com.coordscanner.viewmodel.GpxManagerViewModel
 import kotlinx.coroutines.Dispatchers
@@ -43,14 +44,22 @@ class GpxManagerActivity : AppCompatActivity() {
     private var isAddMode = false
 
     private val openFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { loadGpxFile(it) }
+        uri?.let { dispatchFile(it) }
     }
+
+    private lateinit var filePickerHelper: FilePickerHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         b = ActivityGpxManagerBinding.inflate(layoutInflater)
         setContentView(b.root)
+
+        filePickerHelper = FilePickerHelper(this) { folder ->
+            toast("Папка выбрана: ${folder.name}")
+            val files = filePickerHelper.listGpxKmzFiles()
+            toast("Найдено файлов: ${files.size}")
+        }
 
         setupMap()
         setupButtons()
@@ -75,6 +84,11 @@ class GpxManagerActivity : AppCompatActivity() {
 
         b.btnOpenFile.setOnClickListener {
             openFileLauncher.launch(arrayOf("*/*"))
+        }
+
+        b.btnOpenFile.setOnLongClickListener {
+            filePickerHelper.requestFolderAccess()
+            true
         }
 
         b.btnSelectArea.setOnClickListener {
@@ -206,6 +220,19 @@ class GpxManagerActivity : AppCompatActivity() {
             paint.strokeWidth = 1.5f
             canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
             BitmapDrawable(resources, bmp)
+        }
+    }
+
+    // --- Маршрутизация файла: KMZ → KmzMapActivity, GPX → загрузить здесь ---
+
+    private fun dispatchFile(uri: Uri) {
+        val name = uri.lastPathSegment?.lowercase().orEmpty()
+        val mime = contentResolver.getType(uri)?.lowercase().orEmpty()
+        val isKmz = name.endsWith(".kmz") || mime.contains("kmz") || mime.contains("vnd.google-earth")
+        if (isKmz) {
+            startActivity(Intent(this, KmzMapActivity::class.java).apply { data = uri })
+        } else {
+            loadGpxFile(uri)
         }
     }
 
