@@ -66,6 +66,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, AddPointActivity::class.java))
         }
 
+        binding.btnColumnScan.setOnClickListener {
+            startActivity(Intent(this, ColumnSelectorActivity::class.java))
+        }
+
         binding.btnExportBar.setOnClickListener { exportGpx() }
     }
 

@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000">
+
+    <!-- ═══════════════════════════════════════════
+         ФАЗА 1: КАМЕРА
+    ════════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/cameraContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/viewFinder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Верхний градиент -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:background="@drawable/gradient_top" />
+
+        <!-- Заголовок -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="28dp"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="8dp">
+
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Назад" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Скан с названием"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:fontFamily="sans-serif-medium"
+                android:paddingStart="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Снимайте всю таблицу"
+                android:textColor="#88FFFFFF"
+                android:textSize="11sp"
+                android:paddingEnd="8dp" />
+
+        </LinearLayout>
+
+        <!-- Управление зумом -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="60dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#66000000"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnZoomOut"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="−"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:padding="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp" />
+
+            <TextView
+                android:id="@+id/tvZoomLevel"
+                android:layout_width="56dp"
+                android:layout_height="wrap_content"
+                android:text="1.0×"
+                android:textColor="#DDFFFFFF"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:fontFamily="monospace" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnZoomIn"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="+"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:padding="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp" />
+        </LinearLayout>
+
+        <!-- Кнопки съёмки -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="120dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGallery"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:text="ГАЛЕРЕЯ"
+                android:textColor="#DDFFFFFF"
+                android:textSize="12sp"
+                android:paddingHorizontal="16dp"
+                android:layout_marginEnd="24dp"
+                app:strokeColor="#55FFFFFF" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCapture"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:text="●"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF"
+                android:padding="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                app:backgroundTint="#CC0D1B2A"
+                app:strokeColor="#CCFFFFFF"
+                app:strokeWidth="2dp"
+                app:cornerRadius="35dp" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progressBarCamera"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="#2196F3"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- ═══════════════════════════════════════════
+         ФАЗА 2: ВЫБОР КОЛОНОК
+    ════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/selectionContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- Область с фотографией и оверлеем -->
+        <FrameLayout
+            android:id="@+id/imageFrame"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="#000">
+
+            <ImageView
+                android:id="@+id/ivPhoto"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:contentDescription="Фото таблицы" />
+
+            <!-- Оверлей рисует цветные полосы выбранных колонок -->
+            <com.coordscanner.ColumnOverlayView
+                android:id="@+id/overlayView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- Подсказка при активном режиме выбора -->
+            <TextView
+                android:id="@+id/tvTapHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:background="#CC000000"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                android:padding="16dp"
+                android:gravity="center"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+        <!-- Панель управления выбором колонок -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#0D1B2A"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="12dp">
+
+            <!-- Статус / инструкция -->
+            <TextView
+                android:id="@+id/tvSelectionStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Нажмите кнопку, затем тапните по нужной колонке"
+                android:textColor="#8BB4D8"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Три кнопки выбора колонок -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnColName"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="НАЗВАНИЕ"
+                    android:textSize="11sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    app:strokeColor="#FF8800"
+                    app:strokeWidth="1.5dp"
+                    android:textColor="#FF8800" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnColX"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="X"
+                    android:textSize="11sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    app:strokeColor="#2196F3"
+                    app:strokeWidth="1.5dp"
+                    android:textColor="#2196F3" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnColY"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="Y"
+                    android:textSize="11sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    app:strokeColor="#4CAF50"
+                    app:strokeWidth="1.5dp"
+                    android:textColor="#4CAF50" />
+
+            </LinearLayout>
+
+            <!-- Кнопка Сканировать -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnScanColumns"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="СКАНИРОВАТЬ"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"
+                android:enabled="false"
+                app:backgroundTint="#2196F3"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ═══════════════════════════════════════════
+         ФАЗА 3: РЕЗУЛЬТАТЫ
+    ════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/resultsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#0A1628"
+        android:visibility="gone">
+
+        <!-- Заголовок -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#08111E"
+            android:paddingHorizontal="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBackToSelection"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="← Назад"
+                android:textColor="#2196F3"
+                android:textSize="13sp"
+                android:padding="8dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp" />
+
+            <TextView
+                android:id="@+id/tvResultCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Найдено: 0"
+                android:textColor="#8BB4D8"
+                android:textSize="13sp"
+                android:gravity="center" />
+
+            <!-- Пустышка для симметрии -->
+            <View
+                android:layout_width="80dp"
+                android:layout_height="1dp" />
+
+        </LinearLayout>
+
+        <!-- Строка «Выбрать все» -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:background="#0F1E30">
+
+            <CheckBox
+                android:id="@+id/checkboxSelectAll"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:buttonTint="#2196F3"
+                android:checked="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Выбрать все"
+                android:textColor="#DDFFFFFF"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1C3050" />
+
+        <!-- Список распознанных строк -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerResults"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingVertical="4dp"
+            android:clipToPadding="false" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1C3050" />
+
+        <!-- Кнопки действий -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnExportGpx"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="ЭКСПОРТ GPX"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                app:strokeColor="#2196F3"
+                android:textColor="#2196F3" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveSelected"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="СОХРАНИТЬ (0)"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:enabled="false"
+                app:backgroundTint="#2196F3"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Спиннер OCR (поверх всего) -->
+    <ProgressBar
+        android:id="@+id/progressBarOcr"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="center"
+        android:indeterminateTint="#2196F3"
+        android:visibility="gone" />
+
+</FrameLayout>
