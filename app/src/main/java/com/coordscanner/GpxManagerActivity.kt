@@ -1,5 +1,6 @@
 package com.coordscanner
 
+import android.content.res.ColorStateList
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -72,7 +73,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
 
     private fun setupMap() {
         mapView = b.mapView
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
+        mapView.setTileSource(LayerSwitcherBottomSheet.GOOGLE_HYBRID)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(12.0)
         mapView.controller.setCenter(GeoPoint(48.0, 37.8))
@@ -84,42 +85,55 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     private fun setupButtons() {
         b.btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        b.btnOpenFile.setOnClickListener {
-            openFileLauncher.launch(arrayOf("*/*"))
-        }
+        b.btnOpenFile.setOnClickListener { openFileLauncher.launch(arrayOf("*/*")) }
+        b.btnOpenFile.setOnLongClickListener { filePickerHelper.requestFolderAccess(); true }
 
-        b.btnOpenFile.setOnLongClickListener {
-            filePickerHelper.requestFolderAccess()
-            true
+        // Переключатели слоёв карты
+        selectLayerChip(R.id.btnChipHybrid)
+        b.btnChipOsm.setOnClickListener {
+            mapView.setTileSource(TileSourceFactory.MAPNIK)
+            mapView.invalidate()
+            selectLayerChip(R.id.btnChipOsm)
         }
-
-        b.btnLayers.setOnClickListener {
-            if (supportFragmentManager.findFragmentByTag("layers") == null) {
-                LayerSwitcherBottomSheet().also { sheet ->
-                    sheet.listener = this
-                    sheet.show(supportFragmentManager, "layers")
-                }
-            }
+        b.btnChipSat.setOnClickListener {
+            mapView.setTileSource(LayerSwitcherBottomSheet.GOOGLE_SATELLITE)
+            mapView.invalidate()
+            selectLayerChip(R.id.btnChipSat)
+        }
+        b.btnChipHybrid.setOnClickListener {
+            mapView.setTileSource(LayerSwitcherBottomSheet.GOOGLE_HYBRID)
+            mapView.invalidate()
+            selectLayerChip(R.id.btnChipHybrid)
         }
 
         b.btnSelectArea.setOnClickListener {
             if (isSelectMode) disableSelectionMode() else enableSelectionMode(addMode = false)
         }
-
-        b.btnAddArea.setOnClickListener {
-            enableSelectionMode(addMode = true)
-        }
+        b.btnAddArea.setOnClickListener { enableSelectionMode(addMode = true) }
 
         b.btnPaste.setOnClickListener {
             if (vm.isBufferEmpty) { toast("Буфер пуст"); return@setOnClickListener }
             vm.pasteToNewFile()
             toast("Вставлено ${vm.buffer.value?.size ?: 0} точек")
         }
-
         b.btnManageFile.setOnClickListener {
             if (supportFragmentManager.findFragmentByTag("newfile") == null) {
                 NewFileFragment().show(supportFragmentManager, "newfile")
             }
+        }
+    }
+
+    private fun selectLayerChip(chipId: Int) {
+        val primary = resources.getColor(R.color.primary, theme)
+        val transparent = Color.TRANSPARENT
+        val secondary = resources.getColor(R.color.text_secondary, theme)
+        listOf(
+            b.btnChipOsm  to (R.id.btnChipOsm  == chipId),
+            b.btnChipSat  to (R.id.btnChipSat  == chipId),
+            b.btnChipHybrid to (R.id.btnChipHybrid == chipId)
+        ).forEach { (btn, selected) ->
+            btn.backgroundTintList = ColorStateList.valueOf(if (selected) primary else transparent)
+            btn.setTextColor(if (selected) Color.WHITE else secondary)
         }
     }
 
@@ -177,7 +191,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         mapView.invalidate()
 
         val hasSel = vm.selected.value.orEmpty().isNotEmpty()
-        b.btnSelectArea.text = if (hasSel) "Выделить ещё" else "Выделить область"
+        b.btnSelectArea.text = if (hasSel) "Выделить ещё" else "Выделить"
         b.btnAddArea.visibility = if (hasSel) View.VISIBLE else View.GONE
     }
 
