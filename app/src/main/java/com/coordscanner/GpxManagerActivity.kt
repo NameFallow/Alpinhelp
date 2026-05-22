@@ -1,6 +1,5 @@
 package com.coordscanner
 
-import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -16,9 +15,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.coordscanner.databinding.ActivityGpxManagerBinding
 import com.coordscanner.model.WayPoint
+import com.coordscanner.utils.FileImporter
 import com.coordscanner.utils.FilePickerHelper
 import com.coordscanner.utils.GpxParser
 import com.coordscanner.viewmodel.GpxManagerViewModel
+import org.osmdroid.tileprovider.tilesource.ITileSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,7 +31,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.FolderOverlay
 import org.osmdroid.views.overlay.Marker
 
-class GpxManagerActivity : AppCompatActivity() {
+class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayerSelectedListener {
 
     private lateinit var b: ActivityGpxManagerBinding
     val vm: GpxManagerViewModel by viewModels()
@@ -89,6 +90,15 @@ class GpxManagerActivity : AppCompatActivity() {
         b.btnOpenFile.setOnLongClickListener {
             filePickerHelper.requestFolderAccess()
             true
+        }
+
+        b.btnLayers.setOnClickListener {
+            if (supportFragmentManager.findFragmentByTag("layers") == null) {
+                LayerSwitcherBottomSheet().also { sheet ->
+                    sheet.listener = this
+                    sheet.show(supportFragmentManager, "layers")
+                }
+            }
         }
 
         b.btnSelectArea.setOnClickListener {
@@ -223,39 +233,37 @@ class GpxManagerActivity : AppCompatActivity() {
         }
     }
 
-    // --- Маршрутизация файла: KMZ → KmzMapActivity, GPX → загрузить здесь ---
+    // --- Загрузка файла любого формата через FileImporter ---
 
-    private fun dispatchFile(uri: Uri) {
-        val name = uri.lastPathSegment?.lowercase().orEmpty()
-        val mime = contentResolver.getType(uri)?.lowercase().orEmpty()
-        val isKmz = name.endsWith(".kmz") || mime.contains("kmz") || mime.contains("vnd.google-earth")
-        if (isKmz) {
-            startActivity(Intent(this, KmzMapActivity::class.java).apply { data = uri })
-        } else {
-            loadGpxFile(uri)
+    private fun dispatchFile(uri: Uri) = loadFile(uri)
+
+    private fun loadFile(uri: Uri) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { FileImporter(this@GpxManagerActivity).importFile(uri) }
+                    .getOrElse { e ->
+                        withContext(Dispatchers.Main) { toast("Ошибка: ${e.message}") }
+                        null
+                    }
+            } ?: return@launch
+
+            vm.loadPoints(result.points)
+            // sourceUri только для GPX — только его можно перезаписать в том же формате
+            vm.sourceUri = if (result.fileName.endsWith(".gpx", ignoreCase = true)) uri else null
+
+            if (result.points.isNotEmpty()) {
+                val bbox = BoundingBox.fromGeoPoints(result.points.map { GeoPoint(it.lat, it.lon) })
+                mapView.zoomToBoundingBox(bbox.increaseByScale(1.3f), true)
+                toast("Загружено: ${result.points.size} точек из ${result.fileName}")
+            } else {
+                toast("Точки не найдены: ${result.fileName}")
+            }
         }
     }
 
-    // --- Загрузка GPX файла ---
-
-    private fun loadGpxFile(uri: Uri) {
-        lifecycleScope.launch {
-            val pts = withContext(Dispatchers.IO) {
-                runCatching {
-                    contentResolver.openInputStream(uri)?.use { GpxParser.parse(it) } ?: emptyList()
-                }.getOrElse { e ->
-                    withContext(Dispatchers.Main) { toast("Ошибка: ${e.message}") }
-                    emptyList()
-                }
-            }
-            vm.loadPoints(pts)
-            vm.sourceUri = uri
-            if (pts.isNotEmpty()) {
-                val bbox = BoundingBox.fromGeoPoints(pts.map { GeoPoint(it.lat, it.lon) })
-                mapView.zoomToBoundingBox(bbox.increaseByScale(1.3f), true)
-                toast("Загружено: ${pts.size} точек")
-            }
-        }
+    override fun onLayerSelected(source: ITileSource) {
+        mapView.setTileSource(source)
+        mapView.invalidate()
     }
 
     // --- Сохранение исходного файла после вырезания ---

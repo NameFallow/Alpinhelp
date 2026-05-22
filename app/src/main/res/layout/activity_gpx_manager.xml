@@ -50,7 +50,7 @@
             android:text="Точек: 0"
             android:textColor="@color/text_secondary"
             android:textSize="12sp"
-            android:layout_marginEnd="10dp" />
+            android:layout_marginEnd="6dp" />
 
         <TextView
             android:id="@+id/tvSelectedCount"
@@ -60,7 +60,20 @@
             android:textColor="@color/accent"
             android:textSize="12sp"
             android:textStyle="bold"
+            android:layout_marginEnd="6dp"
             android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLayers"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="🗺"
+            android:textSize="14sp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp"
+            android:textColor="@color/text_secondary"
+            app:strokeColor="@color/navy_stroke" />
     </LinearLayout>
 
     <!-- Строка кнопок режима -->
@@ -80,7 +93,7 @@
             android:layout_height="36dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
-            android:text="Открыть GPX"
+            android:text="📂 Открыть файл"
             android:textSize="11sp"
             app:backgroundTint="@color/primary" />
 
