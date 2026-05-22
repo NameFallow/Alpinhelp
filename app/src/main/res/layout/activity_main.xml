@@ -20,13 +20,15 @@
             app:titleTextColor="@color/white"
             app:subtitleTextColor="@color/text_secondary" />
 
-        <!-- Action area below toolbar -->
+        <!-- Stats row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingBottom="14dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp">
 
             <TextView
                 android:id="@+id/tvPointCount"
@@ -34,111 +36,257 @@
                 android:layout_height="wrap_content"
                 android:text="Нет точек"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:layout_marginBottom="12dp" />
+                android:textSize="13sp" />
+        </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+        <!-- Primary action cards: Сканировать + Фото таблицы -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnScan"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="Сканировать"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-medium"
-                    app:backgroundTint="@color/primary"
-                    app:iconTint="@color/white" />
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnScan"
+                android:layout_width="0dp"
+                android:layout_height="84dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#0D1929"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#442196F3"
+                app:strokeWidth="1dp"
+                app:rippleColor="#332196F3">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnPhotoBatch"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="Фото таблицы"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-medium"
-                    app:backgroundTint="@color/navy_surface"
-                    app:strokeColor="@color/primary"
-                    app:strokeWidth="1dp" />
-            </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="12dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:src="@drawable/ic_scan_live"
+                        android:tint="@color/primary"
+                        android:contentDescription="" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnGallery"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="Галерея"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-medium"
-                    app:backgroundTint="@color/navy_surface"
-                    app:strokeColor="@color/primary"
-                    app:strokeWidth="1dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Сканировать"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:layout_marginTop="7dp"
+                        android:gravity="center" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/fab"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="+ Вручную"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    app:strokeColor="@color/navy_stroke" />
-            </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Живая OCR"
+                        android:textColor="@color/text_hint"
+                        android:textSize="10sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Скан таблицы с названиями точек -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnPhotoBatch"
+                android:layout_width="0dp"
+                android:layout_height="84dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#0B1C24"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#3300BCD4"
+                app:strokeWidth="1dp"
+                app:rippleColor="#2200BCD4">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:src="@drawable/ic_photo_batch"
+                        android:tint="@color/accent"
+                        android:contentDescription="" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Фото таблицы"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:layout_marginTop="7dp"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Пакетный режим"
+                        android:textColor="@color/text_hint"
+                        android:textSize="10sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- Secondary action cards: Галерея + Вручную -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnGallery"
+                android:layout_width="0dp"
+                android:layout_height="58dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#0B1C1A"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#334CAF50"
+                app:strokeWidth="1dp"
+                app:rippleColor="#224CAF50">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_gallery"
+                        android:tint="@color/scanner_green"
+                        android:contentDescription="" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Галерея"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/fab"
+                android:layout_width="0dp"
+                android:layout_height="58dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#0F1E30"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#221C3050"
+                app:strokeWidth="1dp"
+                app:rippleColor="#11FFFFFF">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_add_manual"
+                        android:tint="@color/text_secondary"
+                        android:contentDescription="" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Вручную"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- Utility buttons: Имена / GPX / Конвертер -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="12dp">
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnColumnScan"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="Скан с названием"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-medium"
-                app:backgroundTint="@color/navy_surface"
-                app:strokeColor="#FF8800"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="5dp"
+                android:text="Имена"
+                android:textSize="11sp"
+                android:textColor="#FF8800"
+                android:minWidth="0dp"
+                app:strokeColor="#55FF8800"
                 app:strokeWidth="1dp"
-                android:textColor="#FF8800" />
+                app:cornerRadius="10dp" />
 
-            <!-- GPX Менеджер: открытие, просмотр на карте, вырезка точек -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnGpxManager"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="4dp"
-                android:text="GPX Менеджер"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-medium"
-                app:backgroundTint="@color/navy_surface"
-                app:strokeColor="@color/accent"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="5dp"
+                android:text="GPX"
+                android:textSize="11sp"
+                android:textColor="@color/accent"
+                android:minWidth="0dp"
+                app:strokeColor="#5500BCD4"
                 app:strokeWidth="1dp"
-                android:textColor="@color/accent" />
+                app:cornerRadius="10dp" />
 
-            <!-- Конвертер: GPX ↔ KML ↔ KMZ ↔ DXF -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnConverter"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="4dp"
-                android:text="Конвертер файлов"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-medium"
-                app:backgroundTint="@color/navy_surface"
-                app:strokeColor="@color/scanner_green"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="38dp"
+                android:layout_weight="1"
+                android:text="Конвертер"
+                android:textSize="11sp"
+                android:textColor="@color/scanner_green"
+                android:minWidth="0dp"
+                app:strokeColor="#554CAF50"
                 app:strokeWidth="1dp"
-                android:textColor="@color/scanner_green" />
+                app:cornerRadius="10dp" />
         </LinearLayout>
 
         <!-- Divider -->
@@ -150,59 +298,53 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Content -->
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <FrameLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:paddingVertical="8dp"
+            android:clipToPadding="false" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:paddingVertical="8dp"
-                android:clipToPadding="false" />
+        <LinearLayout
+            android:id="@+id/emptyState"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
 
-            <LinearLayout
-                android:id="@+id/emptyState"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:visibility="gone">
+                android:text="📡"
+                android:textSize="56sp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📡"
-                    android:textSize="56sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Точек нет"
+                android:textColor="@color/text_secondary"
+                android:textSize="18sp"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="12dp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Точек нет"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="18sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:layout_marginTop="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Нажмите «Сканировать»"
+                android:textColor="@color/text_hint"
+                android:textSize="13sp"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+    </FrameLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Нажмите «Сканировать»"
-                    android:textColor="@color/text_hint"
-                    android:textSize="13sp"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-        </FrameLayout>
-    </LinearLayout>
-
-    <!-- Hidden: export fab kept for legacy, click handled via toolbar menu -->
+    <!-- Hidden: kept for legacy binding -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnExportBar"
         android:layout_width="wrap_content"

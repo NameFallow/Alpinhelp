@@ -33,6 +33,8 @@ class EditPointActivity : AppCompatActivity() {
         val pointId = intent.getLongExtra(EXTRA_POINT_ID, -1L)
         if (pointId == -1L) { finish(); return }
 
+        binding.btnSave.isEnabled = false
+
         lifecycleScope.launch {
             val point = PointDatabase.getDatabase(application).pointDao().getById(pointId)
             if (point == null) { finish(); return@launch }
@@ -40,6 +42,7 @@ class EditPointActivity : AppCompatActivity() {
             binding.etName.setText(point.name)
             binding.etX.setText(point.xSk42.toLong().toString())
             binding.etY.setText(point.ySk42.toLong().toString())
+            binding.btnSave.isEnabled = true
         }
 
         binding.btnSave.setOnClickListener { saveChanges() }
@@ -65,7 +68,7 @@ class EditPointActivity : AppCompatActivity() {
 
         val zone = (y / 1_000_000).toInt()
         val (lat, lon) = CoordConverter.sk42ToWgs84(x, y, zone)
-        val updated = currentPoint!!.copy(name = name, xSk42 = x, ySk42 = y, zone = zone, latWgs84 = lat, lonWgs84 = lon)
+        val updated = (currentPoint ?: return).copy(name = name, xSk42 = x, ySk42 = y, zone = zone, latWgs84 = lat, lonWgs84 = lon)
         viewModel.update(updated)
         Toast.makeText(this, "Сохранено", Toast.LENGTH_SHORT).show()
         finish()
