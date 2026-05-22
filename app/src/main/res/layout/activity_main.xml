@@ -125,6 +125,20 @@
                 app:strokeColor="@color/accent"
                 app:strokeWidth="1dp"
                 android:textColor="@color/accent" />
+
+            <!-- Конвертер: GPX ↔ KML ↔ KMZ ↔ DXF -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConverter"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="4dp"
+                android:text="Конвертер файлов"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium"
+                app:backgroundTint="@color/navy_surface"
+                app:strokeColor="@color/scanner_green"
+                app:strokeWidth="1dp"
+                android:textColor="@color/scanner_green" />
         </LinearLayout>
 
         <!-- Divider -->

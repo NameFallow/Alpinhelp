@@ -2,4 +2,5 @@
 <paths>
     <cache-path name="gpx_files" path="gpx/" />
     <cache-path name="kmz_photos" path="kmz_photos/" />
+    <cache-path name="converted" path="converted/" />
 </paths>

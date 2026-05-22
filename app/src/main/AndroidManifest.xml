@@ -66,6 +66,11 @@
             android:exported="false"
             android:label="KMZ Просмотр" />
 
+        <activity
+            android:name=".ConvertActivity"
+            android:exported="false"
+            android:label="Конвертер файлов" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -78,6 +78,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, GpxManagerActivity::class.java))
         }
 
+        binding.btnConverter.setOnClickListener {
+            startActivity(Intent(this, ConvertActivity::class.java))
+        }
+
         binding.btnExportBar.setOnClickListener { exportGpx() }
     }
 
