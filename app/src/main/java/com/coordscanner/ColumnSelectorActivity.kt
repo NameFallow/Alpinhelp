@@ -353,7 +353,7 @@ class ColumnSelectorActivity : AppCompatActivity() {
     // ── Фаза 3: результаты ───────────────────────────────────
 
     private fun setupResultsPanel() {
-        adapter = NamedCoordAdapter { updateResultButtons() }
+        adapter = NamedCoordAdapter(onSelectionChanged = { updateResultButtons() })
         binding.recyclerResults.layoutManager = LinearLayoutManager(this)
         binding.recyclerResults.adapter = adapter
 
