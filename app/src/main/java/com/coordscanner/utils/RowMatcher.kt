@@ -50,6 +50,35 @@ object RowMatcher {
         return matchRows(nameLines, xLines, yLines)
     }
 
+    /**
+     * Матчит строки из НЕСКОЛЬКИХ зон X и НЕСКОЛЬКИХ зон Y.
+     * Строки из всех X-зон объединяются; аналогично для Y.
+     * Имена не извлекаются (все точки будут называться "Точка").
+     */
+    fun matchMultiZone(
+        visionText: Text,
+        bitmapWidth: Int,
+        bitmapHeight: Int,
+        xViewRects: List<android.graphics.RectF>,
+        yViewRects: List<android.graphics.RectF>,
+        imageViewRect: android.graphics.RectF
+    ): List<MatchedRow> {
+        val xImgRects = xViewRects.map { viewRectToImage(it, imageViewRect, bitmapWidth, bitmapHeight) }
+        val yImgRects = yViewRects.map { viewRectToImage(it, imageViewRect, bitmapWidth, bitmapHeight) }
+
+        val xLines = mergeRows(
+            xImgRects.flatMap { extractLines(visionText, it, fixCyrillic = false) }
+                     .sortedBy { it.centerY }
+        )
+        val yLines = mergeRows(
+            yImgRects.flatMap { extractLines(visionText, it, fixCyrillic = false) }
+                     .sortedBy { it.centerY }
+        )
+
+        Log.d(TAG, "matchMultiZone: x=${xLines.size} y=${yLines.size}")
+        return matchRows(emptyList(), xLines, yLines)
+    }
+
     // ── Вспомогательные функции ───────────────────────────────
 
     // Переводит прямоугольник из пространства View в пространство пикселей изображения

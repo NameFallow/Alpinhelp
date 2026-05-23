@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnPhotoMap.setOnClickListener {
-            startActivity(Intent(this, PhotoMapActivity::class.java))
+            startActivity(Intent(this, PhotoZoneActivity::class.java))
         }
 
         binding.btnColumnScan.setOnClickListener {

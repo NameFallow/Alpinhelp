@@ -52,7 +52,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".PhotoMapActivity"
+            android:name=".PhotoZoneActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 

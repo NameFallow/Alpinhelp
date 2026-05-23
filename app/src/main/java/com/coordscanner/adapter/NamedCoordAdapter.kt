@@ -4,10 +4,12 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.coordscanner.databinding.ItemNamedCoordBinding
+import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.MatchedRow
 
 class NamedCoordAdapter(
-    private val onSelectionChanged: () -> Unit
+    private val onSelectionChanged: () -> Unit,
+    var showWgs84: Boolean = false
 ) : RecyclerView.Adapter<NamedCoordAdapter.VH>() {
 
     private data class Item(val row: MatchedRow, var selected: Boolean = true)
@@ -42,9 +44,14 @@ class NamedCoordAdapter(
             cbSelect.setOnCheckedChangeListener(null)
             cbSelect.isChecked = item.selected
             tvName.text = item.row.name
-            tvCoords.text = "X: %,d   Y: %,d   зона %d".format(
-                item.row.x.toLong(), item.row.y.toLong(), item.row.zone
-            )
+            tvCoords.text = if (showWgs84) {
+                val (lat, lon) = CoordConverter.sk42ToWgs84(item.row.x, item.row.y, item.row.zone)
+                "%.6f°N   %.6f°E".format(lat, lon)
+            } else {
+                "X: %,d   Y: %,d   зона %d".format(
+                    item.row.x.toLong(), item.row.y.toLong(), item.row.zone
+                )
+            }
             cbSelect.setOnCheckedChangeListener { _, checked ->
                 item.selected = checked
                 onSelectionChanged()
