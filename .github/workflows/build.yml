@@ -48,6 +48,10 @@ jobs:
       - name: Show build result
         if: always()
         run: |
+          echo "### AAPT2 / Kotlin errors" >> $GITHUB_STEP_SUMMARY
+          grep -E "^(error:|warning:|FAILURE|> Task|Caused by:|Exception)" build-output.txt \
+            | head -60 >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build output (last 80 lines)" >> $GITHUB_STEP_SUMMARY
           tail -80 build-output.txt >> $GITHUB_STEP_SUMMARY || true
 
