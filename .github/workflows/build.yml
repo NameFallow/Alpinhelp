@@ -43,17 +43,21 @@ jobs:
       - name: Build Debug APK
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.txt
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-output.txt
 
       - name: Show build result
         if: always()
         run: |
-          echo "### AAPT2 / Kotlin errors" >> $GITHUB_STEP_SUMMARY
-          grep -E "^(error:|warning:|FAILURE|> Task|Caused by:|Exception)" build-output.txt \
-            | head -60 >> $GITHUB_STEP_SUMMARY || true
+          echo "### AAPT2 errors (raw)" >> $GITHUB_STEP_SUMMARY
+          grep -n "aapt2\|error:\|not found\|failed linking\|Aapt2" build-output.txt \
+            | head -40 >> $GITHUB_STEP_SUMMARY || true
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build output (last 80 lines)" >> $GITHUB_STEP_SUMMARY
-          tail -80 build-output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo "### Tasks + failures" >> $GITHUB_STEP_SUMMARY
+          grep -E "(> Task|FAILED|Caused by:|FAILURE:)" build-output.txt \
+            | head -40 >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build output (last 100 lines)" >> $GITHUB_STEP_SUMMARY
+          tail -100 build-output.txt >> $GITHUB_STEP_SUMMARY || true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
