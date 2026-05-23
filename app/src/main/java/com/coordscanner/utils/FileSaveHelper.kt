@@ -77,9 +77,9 @@ object FileSaveHelper {
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
             ) ?: throw Exception("MediaStore: не удалось создать $fileName")
 
-            context.contentResolver.openOutputStream(uri)
+            val stream = context.contentResolver.openOutputStream(uri)
                 ?: throw Exception("MediaStore: нет доступа к потоку для $fileName")
-            context.contentResolver.openOutputStream(uri)!!.use { stream ->
+            stream.use {
                 BufferedOutputStream(stream).use { bos ->
                     exporter.export(points, bos)
                     bos.flush()

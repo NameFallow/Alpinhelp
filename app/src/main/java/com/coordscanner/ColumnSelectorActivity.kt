@@ -34,6 +34,10 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
 import java.util.concurrent.Executors
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalGetImage::class)
 class ColumnSelectorActivity : AppCompatActivity() {
@@ -175,15 +179,15 @@ class ColumnSelectorActivity : AppCompatActivity() {
     }
 
     private fun loadFromUri(uri: Uri) {
-        try {
-            val stream = contentResolver.openInputStream(uri) ?: return
-            val bmp = BitmapFactory.decodeStream(stream)
-            stream.close()
-            if (bmp != null) showSelectionPhase(bmp)
-            else Toast.makeText(this, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Log.e(TAG, "loadFromUri failed", e)
-            Toast.makeText(this, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val bmp = runCatching {
+                contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            }.onFailure { Log.e(TAG, "loadFromUri failed", it) }.getOrNull()
+            withContext(Dispatchers.Main) {
+                if (bmp != null) showSelectionPhase(bmp)
+                else Toast.makeText(this@ColumnSelectorActivity,
+                    "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

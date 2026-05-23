@@ -16,5 +16,5 @@ data class Point(
     val lonWgs84: Double,
     @ColumnInfo(defaultValue = "manual") val source: String = "manual",
     @ColumnInfo(defaultValue = "#0055FF") val color: String = "#0055FF",
-    @ColumnInfo(defaultValue = "0") val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis()
 )

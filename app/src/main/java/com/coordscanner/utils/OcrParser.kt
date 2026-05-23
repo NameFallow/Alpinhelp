@@ -196,28 +196,38 @@ object OcrParser {
         val n = allNums.size
         if (n < 4) return emptyList()
 
+        var best = emptyList<ParsedCoord>()
+
         for (skip in 0..(n / 3)) {
             val rem = n - skip
-            if (rem < 4 || rem % 2 != 0) continue
-            val half = rem / 2
-            val xCands = allNums.subList(skip, skip + half)
-            val yCands = allNums.subList(skip + half, n)
+            if (rem < 4) continue
+            // Try both floor and ceil split so an odd remainder (one garbled number
+            // dropped by OCR) doesn't silently lose a whole row.
+            val halves = if (rem % 2 == 0) listOf(rem / 2) else listOf(rem / 2, rem / 2 + 1)
+            for (half in halves) {
+                val end = skip + half * 2
+                if (end > n) continue
+                val xCands = allNums.subList(skip, skip + half)
+                val yCands = allNums.subList(skip + half, end)
 
-            if (!xCands.all { isValidX(it) }) continue
-            if (!yCands.all { isValidY(it) }) continue
+                if (!xCands.all { isValidX(it) }) continue
+                if (!yCands.all { isValidY(it) }) continue
 
-            val zoneList = yCands.mapNotNull { zoneOf(it) }
-            if (zoneList.size != yCands.size) continue
-            val zone = zoneList[0]
-            if (zoneList.any { it != zone }) continue
-            if (Math.abs(xCands.average() - yCands.average()) < 300_000.0) continue
+                val zoneList = yCands.mapNotNull { zoneOf(it) }
+                if (zoneList.size != yCands.size) continue
+                val zone = zoneList[0]
+                if (zoneList.any { it != zone }) continue
+                if (Math.abs(xCands.average() - yCands.average()) < 300_000.0) continue
 
-            Log.d(TAG, "ColumnBlocks: skip=$skip ${half}p zone=$zone")
-            return xCands.zip(yCands).mapIndexed { i, (x, y) ->
-                ParsedCoord("Точка ${i + 1}", x, y, zone)
+                if (half > best.size) {
+                    Log.d(TAG, "ColumnBlocks: skip=$skip ${half}p zone=$zone")
+                    best = xCands.zip(yCands).mapIndexed { i, (x, y) ->
+                        ParsedCoord("Точка ${i + 1}", x, y, zone)
+                    }
+                }
             }
         }
-        return emptyList()
+        return best
     }
 
     // ── Degrees WGS-84 ───────────────────────────────────────

@@ -52,10 +52,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnScan.setOnClickListener {
-            startActivity(Intent(this, ScanActivity::class.java))
-        }
-
         binding.btnPhotoBatch.setOnClickListener {
             startActivity(Intent(this, PhotoBatchActivity::class.java))
         }
@@ -68,6 +64,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.fab.setOnClickListener {
             startActivity(Intent(this, AddPointActivity::class.java))
+        }
+
+        binding.btnPhotoMap.setOnClickListener {
+            startActivity(Intent(this, PhotoMapActivity::class.java))
         }
 
         binding.btnColumnScan.setOnClickListener {

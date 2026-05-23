@@ -243,7 +243,7 @@ class ScanActivity : AppCompatActivity() {
                     }
                 }
 
-                runOnUiThread {
+                if (!isDestroyed) runOnUiThread {
                     binding.overlayView.setRects(highlightBoxes)
                     if (debugVisible && rawText.isNotBlank()) {
                         binding.tvDebugOcr.text = rawText
