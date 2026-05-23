@@ -1,0 +1,35 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g visibility="hidden" id="Каркас">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2282652489024">
+    <rect id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="1000.0078" width="1000.0343" y="0.017" x="-0.0652" class="fil0 str0"/>
+    <line id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" y2="1000.0249" x2="999.969" y1="0.017" x1="-0.0652" class="fil0 str0"/>
+    <line id="svg_3" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" y2="0.017" x2="999.969" y1="1000.0249" x1="-0.0652" class="fil0 str0"/>
+    <line id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" y2="1000.0249" x2="499.9519" y1="0.017" x1="499.9519" class="fil0 str0"/>
+    <line id="svg_5" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" y2="500.021" x2="999.969" y1="500.021" x1="-0.0652" class="fil0 str0"/>
+   </g>
+   <rect id="svg_6" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="1000.0079" width="500.0171" y="0.0169" x="-0.0653" class="fil0 str0"/>
+   <rect id="svg_7" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="1000.0079" width="500.0171" y="0.0169" x="499.952" class="fil0 str0"/>
+   <rect id="svg_8" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="1000.0079" width="250.0086" y="0.0169" x="-0.0652" class="fil0 str0"/>
+   <rect id="svg_9" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="1000.0079" width="250.0086" y="0.0169" x="749.9604" class="fil0 str0"/>
+   <rect id="svg_10" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="500.0039" width="1000.0342" y="500.0211" x="-0.0652" class="fil0 str0"/>
+   <rect id="svg_11" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="500.004" width="1000.0342" y="0.017" x="-0.0652" class="fil0 str0"/>
+   <rect id="svg_12" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="250.002" width="1000.0342" y="750.0229" x="-0.0652" class="fil0 str0"/>
+   <rect id="svg_13" fill="none" stroke-miterlimit="22.9256" stroke-width="0.2" stroke="black" height="250.002" width="1000.0342" y="250.019" x="-0.0652" class="fil0 str0"/>
+  </g>
+  <g id="Слой_x0020_2">
+   <metadata id="CorelCorpID_1Corel-Layer"/>
+   <g id="_2282652486048">
+    <line id="svg_14" fill="none" stroke-miterlimit="22.9256" stroke-width="80" stroke="black" y2="23.8786" x2="499.9517" y1="755.7344" x1="499.9517" class="fil0 str1"/>
+    <line id="svg_15" fill="none" stroke-miterlimit="22.9256" stroke-width="80" stroke="black" y2="252.7563" x2="626.5274" y1="574.8001" x1="626.5274" class="fil0 str1"/>
+    <line id="svg_16" fill="none" stroke-miterlimit="22.9256" stroke-width="80" stroke="black" y2="754.8325" x2="740.3597" y1="756.6363" x1="271.6906" class="fil0 str1"/>
+    <line id="svg_17" fill="none" stroke-miterlimit="22.9256" stroke-width="80" stroke="black" y2="846.3211" x2="740.3598" y1="848.1249" x1="271.6907" class="fil0 str1"/>
+    <line id="svg_18" fill="none" stroke-miterlimit="22.9256" stroke-width="80" stroke="black" y2="253.0213" x2="371.8794" y1="581.1282" x1="371.8794" class="fil0 str1"/>
+    <line id="svg_19" fill="none" stroke-miterlimit="22.9256" stroke-width="80" stroke="black" y2="937.8267" x2="740.3598" y1="939.6304" x1="271.6907" class="fil0 str1"/>
+   </g>
+  </g>
+ </g>
+</svg>

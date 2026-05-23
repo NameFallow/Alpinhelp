@@ -1,0 +1,26 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_5">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2306830054576">
+    <g id="svg_1">
+     <path id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="#FF0303" d="m46.0588,612.8521c8.085,-44.5994 6.8384,-67.5071 108.0092,-74.3902l694.1342,0c102.0249,6.8019 105.0426,15.794 110.0815,76.9863" class="fil0 str0"/>
+     <g id="svg_3">
+      <path id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m204.1807,467.4465c19.6471,-22.2316 48.3747,-36.2505 80.3765,-36.2505c59.221,0 107.229,48.0081 107.229,107.2291c0,59.2211 -48.008,107.2292 -107.229,107.2292c-59.221,0 -107.229,-48.0081 -107.229,-107.2292c0,-27.2192 10.1417,-52.0696 26.8525,-70.9786" class="fil0 str1"/>
+      <line id="svg_5" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="431.1991" x2="283.7348" y1="358.1859" x1="284.5572" class="fil0 str1"/>
+      <line id="svg_6" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="538.4252" x2="391.7862" y1="538.4252" x1="177.3282" class="fil0 str1"/>
+     </g>
+     <g id="svg_7">
+      <path id="svg_8" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m772.0541,448.5976c29.292,19.1419 48.6479,52.2243 48.6479,89.8275c0,59.2211 -48.008,107.2292 -107.229,107.2292c-59.221,0 -107.229,-48.0081 -107.229,-107.2292c0,-59.221 48.008,-107.2291 107.229,-107.2291c21.6178,0 41.7414,6.3971 58.5811,17.4016" class="fil1 str1"/>
+      <line id="svg_9" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="431.196" x2="713.473" y1="358.1859" x1="713.473" class="fil0 str1"/>
+      <line id="svg_10" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="538.4252" x2="820.702" y1="538.4252" x1="606.244" class="fil0 str1"/>
+     </g>
+    </g>
+    <polyline id="svg_11" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" points="192.3937,343.9418 286.3189,250.0191 411.3232,375.0201 411.3232,750.023 161.3146,750.023 161.3146,375.0201 192.3937,343.9418 " class="fil1 str1"/>
+    <polyline id="svg_12" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" points="640.9589,322.1011 713.0428,250.0191 838.0471,375.0201 838.0471,750.023 588.0385,750.023 588.0385,375.0201 640.9589,322.1011 " class="fil1 str1"/>
+   </g>
+  </g>
+ </g>
+</svg>

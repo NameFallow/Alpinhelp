@@ -12,6 +12,20 @@ object KmzParser {
 
     private const val TAG = "KmzParser"
     private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
+    private val ICON_EXTENSIONS  = setOf("svg", "png", "gif", "webp", "bmp")
+
+    // Пытается сопоставить иконку из KMZ с встроенной иконкой из assets:
+    // 1. По точному имени файла, 2. По нечёткому совпадению
+    fun matchBuiltInIcon(iconBytes: ByteArray, iconFileName: String, iconManager: IconManager): String? {
+        val byName = iconManager.findIcon(iconFileName)
+        if (byName != null) return byName
+
+        val nameNoExt = iconFileName.substringBeforeLast('.')
+        val fuzzy = iconManager.findIconFuzzy(nameNoExt)
+        if (fuzzy != null) return fuzzy
+
+        return null
+    }
 
     fun parse(context: Context, uri: Uri): List<WayPoint> {
         val photoDir = File(context.cacheDir, "kmz_photos")
@@ -19,6 +33,8 @@ object KmzParser {
         photoDir.mkdirs()
 
         val photoMap = mutableMapOf<String, File>()
+        // Байты иконок: shortName → bytes (для matchBuiltInIcon)
+        val iconBytesMap = mutableMapOf<String, ByteArray>()
         var kmlBytes: ByteArray? = null
 
         context.contentResolver.openInputStream(uri)?.use { input ->
@@ -37,17 +53,33 @@ object KmzParser {
                                 val outFile = File(photoDir, shortName)
                                 outFile.writeBytes(bytes)
 
-                                // Регистрируем по всем возможным ключам
                                 photoMap[entryName] = outFile
                                 photoMap[entryName.lowercase()] = outFile
                                 photoMap[shortName] = outFile
                                 photoMap[shortName.lowercase()] = outFile
 
-                                // URL-декодированные варианты (кириллица, пробелы)
                                 try {
                                     val decoded = URLDecoder.decode(entryName, "UTF-8")
                                     photoMap[decoded] = outFile
                                     photoMap[decoded.substringAfterLast('/')] = outFile
+                                } catch (_: Exception) {}
+                            }
+                            ext in ICON_EXTENSIONS -> {
+                                // SVG и другие иконки — не фото, но нужны для иконок точек
+                                val shortName = entryName.substringAfterLast('/')
+                                val outFile = File(photoDir, shortName)
+                                outFile.writeBytes(bytes)
+                                photoMap[entryName] = outFile
+                                photoMap[entryName.lowercase()] = outFile
+                                photoMap[shortName] = outFile
+                                photoMap[shortName.lowercase()] = outFile
+                                iconBytesMap[shortName] = bytes
+                                try {
+                                    val decoded = URLDecoder.decode(entryName, "UTF-8")
+                                    photoMap[decoded] = outFile
+                                    val decodedShort = decoded.substringAfterLast('/')
+                                    photoMap[decodedShort] = outFile
+                                    iconBytesMap[decodedShort] = bytes
                                 } catch (_: Exception) {}
                             }
                         }
@@ -61,6 +93,7 @@ object KmzParser {
         Log.d(TAG, "Файлов в photoMap: ${photoMap.size}, в папке: ${photoDir.listFiles()?.size}")
 
         val points = kmlBytes?.let { KmlParser.parse(it.inputStream()) } ?: emptyList()
+        val iconManager = IconManager(context)
 
         val result = points.map { point ->
             val rawRef = extractPhotoRef(point.description ?: "")
@@ -69,7 +102,6 @@ object KmzParser {
                 findPhoto(decoded, photoMap, photoDir)
             } else null
 
-            // Resolve icon file for KMZ-relative symbol hrefs (e.g. "files/aq_wpt_circle.png")
             val iconFile = point.symbol
                 ?.takeIf { !it.startsWith("http", ignoreCase = true) }
                 ?.let { sym ->
@@ -77,12 +109,19 @@ object KmzParser {
                     findPhoto(decoded, photoMap, photoDir)
                 }
 
-            Log.d(TAG, "Точка: ${point.name} | ref=$rawRef | file=${photoFile?.name} | icon=${iconFile?.name}")
+            // Пытаемся сопоставить иконку с встроенной
+            val builtInIconName = iconFile?.let { f ->
+                val bytes = iconBytesMap[f.name] ?: f.readBytes()
+                matchBuiltInIcon(bytes, f.name, iconManager)
+            }
+
+            Log.d(TAG, "Точка: ${point.name} | ref=$rawRef | icon=${iconFile?.name} | builtIn=$builtInIconName")
 
             point.copy(
-                photoPath      = photoFile?.absolutePath ?: point.photoPath,
+                photoPath         = photoFile?.absolutePath ?: point.photoPath,
                 photoOriginalName = photoFile?.name ?: point.photoOriginalName,
-                iconFilePath   = iconFile?.absolutePath
+                iconFilePath      = if (builtInIconName == null) iconFile?.absolutePath else null,
+                builtInIconName   = builtInIconName
             )
         }
 

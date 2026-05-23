@@ -72,6 +72,9 @@ dependencies {
     // Glide — загрузка и кэширование изображений (для KMZ фото в InfoWindow)
     implementation 'com.github.bumptech.glide:glide:4.16.0'
 
+    // AndroidSVG — рендеринг SVG иконок AlpineQuest
+    implementation 'com.caverock:androidsvg-aar:1.4'
+
     // DocumentFile — SAF-доступ к папкам (Android 11+)
     implementation 'androidx.documentfile:documentfile:1.0.1'
 

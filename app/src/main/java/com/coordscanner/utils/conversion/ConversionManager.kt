@@ -38,8 +38,8 @@ class ConversionManager(private val context: Context) {
 
     private fun exporterFor(fmt: FileFormat): FormatExporter = when (fmt) {
         FileFormat.GPX -> GpxConversionExporter()
-        FileFormat.KML -> KmlConversionExporter()
-        FileFormat.KMZ -> KmzConversionExporter()
+        FileFormat.KML -> KmlConversionExporter(context)
+        FileFormat.KMZ -> KmzConversionExporter(context)
         FileFormat.DXF -> DxfConversionExporter()
     }
 }

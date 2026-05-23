@@ -13,8 +13,18 @@
         android:id="@+id/colorDot"
         android:layout_width="10dp"
         android:layout_height="10dp"
-        android:layout_marginEnd="10dp"
+        android:layout_marginEnd="6dp"
         android:background="@drawable/color_circle" />
+
+    <!-- Встроенная иконка (видна только если builtInIconName != null) -->
+    <ImageView
+        android:id="@+id/ivIcon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="6dp"
+        android:scaleType="fitCenter"
+        android:padding="2dp"
+        android:visibility="gone" />
 
     <!-- Название -->
     <TextView

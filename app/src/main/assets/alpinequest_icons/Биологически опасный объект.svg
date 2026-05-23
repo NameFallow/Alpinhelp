@@ -1,0 +1,36 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_5">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2306958406864">
+    <line id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="234.8503" x2="765.1295" y1="765.1916" x1="234.7743" class="fil0 str0"/>
+    <line id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="156.0986" x2="649.6964" y1="238.0275" x1="567.7654" class="fil0 str0"/>
+    <line id="svg_3" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="238.0275" x2="567.7654" y1="253.6475" x1="552.145" class="fil0 str0"/>
+    <line id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="253.6475" x2="552.145" y1="540.6579" x1="265.127" class="fil0 str0"/>
+    <line id="svg_5" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="540.6579" x2="265.127" y1="652.932" x1="152.85" class="fil0 str0"/>
+    <line id="svg_6" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="367.4963" x2="850.8763" y1="849.9457" x1="364.8109" class="fil0 str0"/>
+    <line id="svg_7" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="599.132" x2="838.894" y1="853.1953" x1="584.8241" class="fil0 str0"/>
+    <line id="svg_8" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="#FF6600" y2="150.957" x2="441.6902" y1="466.1949" x1="126.4441" class="fil0 str0"/>
+    <g id="svg_9">
+     <path id="svg_10" fill="black" d="m149.8148,374.9783l228.6731,125.0042l-76.9948,42.0893l-25.6979,14.0477l-125.9804,68.8672c-25.5989,-127.0665 -25.5838,-122.9387 0,-250.0084z" class="fil1"/>
+     <path id="svg_11" fill="none" stroke-miterlimit="22.9256" stroke-width="10" stroke="black" d="m275.7952,556.1195l-125.9804,68.8672c-25.5989,-127.0665 -25.5838,-122.9387 0,-250.0084l228.6731,125.0042l-102.6927,56.137" class="fil0 str1"/>
+    </g>
+    <path id="svg_12" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m750.3337,779.2094c-66.3913,59.5809 -154.154,95.8245 -250.3818,95.8245c-207.1139,0 -375.0128,-167.899 -375.0128,-375.013c0,-207.114 167.8989,-375.013 375.0128,-375.013c207.1139,0 375.0128,167.899 375.0128,375.013c0,110.8861 -48.1264,210.5317 -124.631,279.1885" class="fil2 str2"/>
+    <g id="svg_13">
+     <path id="svg_14" fill-rule="nonzero" fill="black" d="m624.9584,153.2512l-125.0042,228.6731l-63.4987,-116.1597l-61.5055,-112.5134c132.0573,-30.7881 117.9508,-30.7872 250.0084,0z" class="fil3"/>
+     <path id="svg_15" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="10" stroke="black" d="m436.4555,265.7646l-61.5055,-112.5134c132.0573,-30.7881 117.9508,-30.7872 250.0084,0l-125.0042,228.6731l-63.4987,-116.1597" class="fil2 str1"/>
+    </g>
+    <g id="svg_16">
+     <path id="svg_17" fill="black" d="m846.5708,625.0395l-88.3553,-48.2994l-140.3178,-76.7048l228.6731,-125.0042c30.4634,131.7792 30.4568,118.2275 0,250.0084z" class="fil1"/>
+     <path id="svg_18" fill="none" stroke-miterlimit="22.9256" stroke-width="10" stroke="black" d="m758.2155,576.7401l-140.3178,-76.7048l228.6731,-125.0042c30.4634,131.7792 30.4568,118.2275 0,250.0084l-88.3553,-48.2994" class="fil0 str1"/>
+    </g>
+    <g id="svg_19">
+     <path id="svg_20" fill-rule="nonzero" fill="black" d="m374.8485,849.8868l125.0042,-228.6731l72.1895,132.0579l52.8147,96.6152c-127.4463,25.9649 -122.5537,25.9254 -250.0084,0z" class="fil3"/>
+     <path id="svg_21" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="10" stroke="black" d="m572.0422,753.2716l52.8147,96.6152c-127.4463,25.9649 -122.5537,25.9254 -250.0084,0l125.0042,-228.6731l72.1895,132.0579" class="fil2 str1"/>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>

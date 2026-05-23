@@ -62,7 +62,7 @@ object FileSaveHelper {
         fileName: String,
         format: SaveFormat
     ): SaveResult {
-        val exporter = getExporter(format)
+        val exporter = getExporter(format, context)
         val uri: Uri
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -135,10 +135,10 @@ object FileSaveHelper {
         )
     }
 
-    fun getExporter(format: SaveFormat): FormatExporter = when (format) {
-        SaveFormat.KMZ -> KmzConversionExporter()
+    fun getExporter(format: SaveFormat, context: Context? = null): FormatExporter = when (format) {
+        SaveFormat.KMZ -> KmzConversionExporter(context)
         SaveFormat.GPX -> GpxConversionExporter()
-        SaveFormat.KML -> KmlConversionExporter()
+        SaveFormat.KML -> KmlConversionExporter(context)
         SaveFormat.DXF -> DxfConversionExporter()
     }
 

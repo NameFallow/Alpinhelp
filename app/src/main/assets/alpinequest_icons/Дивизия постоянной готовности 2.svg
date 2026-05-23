@@ -1,0 +1,16 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_5">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2299777826208">
+    <line id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="900.7794" x2="878.7323" y1="160.3688" x1="878.7323" class="fil0 str0"/>
+    <g id="svg_2">
+     <polygon id="svg_3" fill="black" points="878.7065,375.7468 878.7065,110.1028 684.4706,110.1028 346.5958,110.1028 105.7969,110.1028 235.4433,242.9248 105.7969,375.7468 336.0161,375.7468 658.4017,375.7468 " class="fil1"/>
+     <polyline id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" points="336.0161,375.7468 658.4017,375.7468 878.7065,375.7468 878.7065,110.1028 684.4705,110.1028 346.5958,110.1028 105.7969,110.1028 235.4433,242.9248 105.7969,375.7468 336.0161,375.7468 " class="fil0 str0"/>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>

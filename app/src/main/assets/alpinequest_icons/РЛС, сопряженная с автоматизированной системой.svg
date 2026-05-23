@@ -1,0 +1,23 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_2">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2999671695824">
+    <g id="svg_1">
+     <polyline id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" points="499.2466,369.5783 500.6572,210.6865 500.8984,183.5223 271.9871,185.6763 " class="fil0 str0"/>
+     <path id="svg_3" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" d="m139.7471,295.6166c4.1334,0.375 8.327,0.5671 12.5707,0.5671c68.1579,0 123.4107,-49.5513 123.4107,-110.6758c0,-61.1246 -55.2528,-110.6759 -123.4107,-110.6759c-6.0591,0 -12.0163,0.3916 -17.8417,1.1481" class="fil0 str0"/>
+     <path id="svg_4" fill-rule="nonzero" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" d="m235.5478,841.7608l262.5692,-501.4711l262.5691,501.4711l-525.1383,0zm131.2846,-250.7356m262.5691,0m-131.2845,250.7356" class="fil1 str0"/>
+     <line id="svg_5" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" y2="181.55" x2="739.1548" y1="183.5223" x1="500.8984" class="fil0 str0"/>
+     <line id="svg_6" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" y2="265.1846" x2="711.4333" y1="108.5845" x1="767.6511" class="fil0 str0"/>
+     <line id="svg_7" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" y2="269.4906" x2="799.3652" y1="112.8906" x1="855.583" class="fil0 str0"/>
+    </g>
+    <g id="svg_8">
+     <path id="svg_9" fill-rule="nonzero" fill="black" d="m309.2742,309.7933l77.7244,-38.912l0.05,77.7494l-77.7744,-38.8374zm295.7687,19.91l-222.0705,0.1427l-0.0258,-40.2l222.0705,-0.1427l0.0258,40.2zm73.6724,-20.1473l-77.7244,38.9373l-0.0499,-77.7494l77.7743,38.8121z" class="fil2"/>
+    </g>
+   </g>
+   <polyline id="svg_10" fill="none" stroke-miterlimit="22.9256" stroke-width="40.2" stroke="black" points="556.9478,623.3912 463.3301,623.3912 501.7373,688.6803 456.1287,748.815 559.9484,748.815 " class="fil0 str0"/>
+  </g>
+ </g>
+</svg>

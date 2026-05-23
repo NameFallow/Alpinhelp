@@ -1,0 +1,21 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_5">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2656495434976">
+    <path fill-rule="nonzero" fill="black" d="m513.4138,548.3578l1.5199,150.5796l-29.5916,0.2988l-1.5199,-150.5797l29.5916,-0.2987zm-15.5245,-72.0519l38.8731,75.7989l-76.1837,0.7688l37.3103,-76.5677l0.0003,0z" class="fil0" id="svg_34"/>
+    <path fill-rule="nonzero" fill="none" stroke-opacity="0.98823" stroke-miterlimit="22.9256" stroke-width="40" stroke="black" d="m291.6364,174.5248c2.3085,-0.0352 4.6306,-0.0334 6.9654,0.0055c77.1418,1.2915 138.7945,43.0606 137.7056,93.2936c-1.0889,50.233 -64.5074,89.9082 -141.6489,88.6164c-1.4421,-0.0241 -2.8788,-0.0626 -4.3098,-0.1149" class="fil1 str0" id="svg_36"/>
+    <g id="svg_38">
+     <path fill-rule="nonzero" fill="black" d="m315.7306,250.6517l201.7261,2.2392l-0.4277,29.591l-201.7261,-2.2392l0.4277,-29.591zm-82.6117,13.8811l87.4936,-37.1382l-1.1015,76.1815l-86.3921,-39.0433z" class="fil0" id="svg_39"/>
+    </g>
+    <polyline id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="black" points="281.3493,722.2382 91.7432,627.4377 498.6048,424.0122 741.0836,545.2484 905.4665,627.4377 498.6048,830.8631 281.3493,722.2382 " class="fil2 str1"/>
+    <line id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="699.1023" x2="600.166" y1="699.1023" x1="397.0436" class="fil2 str2"/>
+    <line id="svg_3" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="742.4453" x2="600.166" y1="655.7594" x1="600.166" class="fil2 str2"/>
+    <line id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="746.6213" x2="397.0437" y1="659.9354" x1="397.0437" class="fil2 str2"/>
+    <line id="svg_5" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="black" y2="424.0122" x2="498.6048" y1="252.4348" x1="498.6049" class="fil2 str1"/>
+   </g>
+  </g>
+ </g>
+</svg>

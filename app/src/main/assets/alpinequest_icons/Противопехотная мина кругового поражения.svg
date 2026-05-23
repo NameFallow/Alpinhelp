@@ -1,0 +1,26 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_2">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <ellipse id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="70" stroke="black" ry="298.3397" rx="298.3476" cy="500.0209" cx="499.952" class="fil0 str0"/>
+   <g id="_2253723537920">
+    <line id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="70" stroke="black" y2="289.0629" x2="710.9155" y1="125.018" x1="874.9647" class="fil0 str0"/>
+    <path id="svg_3" fill-rule="nonzero" fill="black" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m800.1241,126.7853l112.6698,-40.481l-40.481,112.6698l-72.1888,-72.1888zm56.3349,-20.2405m36.0945,36.0944m-56.335,20.2405" class="fil1 str1"/>
+   </g>
+   <g id="_2253723537728">
+    <line id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="70" stroke="black" y2="710.5357" x2="288.5461" y1="874.5806" x1="124.4969" class="fil0 str0"/>
+    <path id="svg_5" fill-rule="nonzero" fill="black" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m199.3375,872.8133l-112.6698,40.481l40.481,-112.6698l72.1888,72.1888zm-56.3349,20.2405m-36.0945,-36.0944m56.335,-20.2405" class="fil1 str1"/>
+   </g>
+   <g id="_2253723537872">
+    <line id="svg_6" fill="none" stroke-miterlimit="22.9256" stroke-width="70" stroke="black" y2="709.0366" x2="712.8402" y1="873.0858" x1="876.8851" class="fil0 str0"/>
+    <path id="svg_7" fill-rule="nonzero" fill="black" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m875.1178,798.2452l40.481,112.6698l-112.6698,-40.481l72.1888,-72.1888zm20.2405,56.3349m-36.0944,36.0945m-20.2405,-56.335" class="fil1 str1"/>
+   </g>
+   <g id="_2253723537824">
+    <line id="svg_8" fill="none" stroke-miterlimit="22.9256" stroke-width="70" stroke="black" y2="289.063" x2="288.9884" y1="125.0138" x1="124.9435" class="fil0 str0"/>
+    <path id="svg_9" fill-rule="nonzero" fill="black" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" d="m126.7108,199.8544l-40.481,-112.6698l112.6698,40.481l-72.1888,72.1888zm-20.2405,-56.3349m36.0944,-36.0945m20.2405,56.335" class="fil1 str1"/>
+   </g>
+  </g>
+ </g>
+</svg>

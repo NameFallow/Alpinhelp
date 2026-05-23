@@ -1,0 +1,21 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_5">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2300081785472">
+    <line id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="896.5045" x2="820.3511" y1="156.0939" x1="820.3511" class="fil0 str0"/>
+    <g id="svg_2">
+     <polyline id="svg_3" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" points="303.0414,371.4719 465.4953,371.4719 586.4602,371.4719 820.3257,371.4719 820.3257,105.8279 667.3337,105.8279 614.1337,105.8279 255.4613,105.8279 186.8322,105.8279 187.8918,371.4719 244.2304,371.4719 285.3282,371.4719 303.0414,371.4719 " class="fil0 str0"/>
+    </g>
+    <g id="svg_4">
+     <polygon id="svg_5" fill="black" points="346.6996,177.4712 429.2385,110.3486 181.4825,113.2455 " class="fil1"/>
+     <polygon id="svg_6" fill="black" points="346.6996,177.4712 429.2385,110.3486 815.8663,105.8279 824.5686,363.2358 625.5906,285.886 " class="fil1"/>
+     <polyline id="svg_7" fill="none" stroke-miterlimit="22.9256" stroke-width="5" stroke="black" points="346.6996,177.4712 181.4825,113.2455 429.2385,110.3486 " class="fil0 str1"/>
+     <path id="svg_8" fill="none" stroke-miterlimit="22.9256" stroke-width="5" stroke="black" d="m625.5906,285.886l-278.891,-108.4148m82.5389,-67.1226l386.6278,-4.5207l8.7023,257.4079l-198.978,-77.3498" class="fil0 str1"/>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>

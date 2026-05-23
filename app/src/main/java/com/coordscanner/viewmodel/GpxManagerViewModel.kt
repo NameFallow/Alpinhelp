@@ -62,6 +62,12 @@ class GpxManagerViewModel : ViewModel() {
         _newFile.value = _newFile.value.orEmpty().filter { it != p }
     }
 
+    fun setBuiltInIcon(wp: WayPoint, iconName: String) {
+        _newFile.value = _newFile.value.orEmpty().map {
+            if (it === wp) it.copy(builtInIconName = iconName) else it
+        }
+    }
+
     fun clearNewFile()  { _newFile.value  = emptyList() }
     fun clearBuffer()   { _buffer.value   = emptyList() }
 

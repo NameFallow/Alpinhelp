@@ -1,0 +1,21 @@
+<svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" version="1.1" xml:space="preserve">
+
+ <g>
+  <title>Layer 1</title>
+  <g id="Слой_x0020_5">
+   <metadata id="CorelCorpID_0Corel-Layer"/>
+   <g id="_2656558360704">
+    <path fill-rule="nonzero" fill="black" d="m437.2418,545.3975l105.4012,107.5506l21.1357,-20.7132l-105.4012,-107.5506l-21.1357,20.7132zm-39.9709,-61.9259l26.1105,81.0853l54.4136,-53.3263l-80.5238,-27.7593l-0.0003,0.0003z" class="fil0" id="svg_34"/>
+    <path fill-rule="nonzero" fill="none" stroke-opacity="0.98823" stroke-miterlimit="22.9256" stroke-width="40" stroke="black" d="m329.7223,124.2372c-1.6572,1.6075 -3.2979,3.2508 -4.9213,4.9292c-53.6343,55.4607 -67.6941,128.591 -31.4041,163.3412c36.2901,34.7501 109.1883,17.961 162.8221,-37.4997c1.0028,-1.0368 1.9914,-2.0799 2.9664,-3.1288" class="fil1 str0" id="svg_36"/>
+    <g id="svg_38">
+     <path fill-rule="nonzero" fill="black" d="m366.5151,195.1043l-141.0587,144.2253l21.2265,20.6215l141.0586,-144.2253l-21.2264,-20.6215zm68.2307,-48.5999l-88.128,35.6067l54.6473,53.0896l33.4807,-88.6963z" class="fil0" id="svg_39"/>
+    </g>
+    <polyline id="svg_1" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="black" points="284.7917,671.9807 215.9366,878.5386 647.4748,734.6874 724.2769,504.2894 791.3261,303.1492 359.7878,447.0003 284.7917,671.9807 " class="fil2 str1"/>
+    <line id="svg_2" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="713.333" x2="482.4912" y1="569.7038" x1="626.1205" class="fil2 str2"/>
+    <line id="svg_3" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="743.9812" x2="513.1394" y1="682.685" x1="451.8432" class="fil2 str2"/>
+    <line id="svg_4" fill="none" stroke-miterlimit="22.9256" stroke-width="30" stroke="black" y2="603.3048" x2="659.7214" y1="542.0087" x1="598.4253" class="fil2 str2"/>
+    <line id="svg_5" fill="none" stroke-miterlimit="22.9256" stroke-width="40" stroke="black" y2="447.0003" x2="359.7878" y1="325.6768" x1="238.4642" class="fil2 str1"/>
+   </g>
+  </g>
+ </g>
+</svg>

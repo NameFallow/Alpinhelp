@@ -30,8 +30,9 @@ class NewFileFragment : BottomSheetDialogFragment() {
     private val b get() = _b!!
     private val vm: GpxManagerViewModel by activityViewModels()
     private val adapter = WayPointAdapter(
-        onRemove = { wp -> vm.removeFromNewFile(wp) },
-        onPhotoClick = { path -> showPhotoPreview(path) }
+        onRemove    = { wp -> vm.removeFromNewFile(wp) },
+        onPhotoClick = { path -> showPhotoPreview(path) },
+        onIconPick  = { wp, iconName -> vm.setBuiltInIcon(wp, iconName) }
     )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, saved: Bundle?): View {

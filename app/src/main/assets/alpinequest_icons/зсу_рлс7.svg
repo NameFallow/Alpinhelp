@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Creator: CorelDRAW 2019 (64-Bit) -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="512px" height="512px" version="1.0" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd"
+viewBox="0 0 512 512"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <g id="Слой_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_1940953097040">
+   <g>
+    <polygon fill="none" stroke="black" stroke-width="30" stroke-miterlimit="22.9256" points="293.46,425.58 186.85,451.49 80.24,477.39 106.14,370.78 132.04,264.17 238.65,238.27 345.26,212.37 319.36,318.98 "/>
+    <g>
+     <polygon fill="blue" points="300.72,254.75 127.38,434.69 "/>
+     <path id="1" fill="black" fill-rule="nonzero" d="M300.64 254.83l-25.95 82.98 -56 -53.95 81.95 -29.03zm-184.07 169.45l120.02 -124.59 21.61 20.81 -120.02 124.6 -21.61 -20.82z"/>
+    </g>
+    <g>
+     <polygon fill="blue" points="265.71,353.47 211.57,408.73 "/>
+     <line id="1" fill="none" stroke="black" stroke-width="30" stroke-miterlimit="22.9256" x1="265.71" y1="353.47" x2="211.57" y2= "408.73" />
+    </g>
+    <g>
+     <polygon fill="blue" points="204.46,297.2 150.32,352.46 "/>
+     <line id="1" fill="none" stroke="black" stroke-width="30" stroke-miterlimit="22.9256" x1="204.46" y1="297.2" x2="150.32" y2= "352.46" />
+    </g>
+   </g>
+   <path fill="none" stroke="black" stroke-width="30" stroke-miterlimit="22.9256" d="M458.87 211.67c-24.63,24.63 -68.55,20.63 -98.11,-8.92 -29.55,-29.56 -33.55,-73.48 -8.92,-98.11"/>
+  </g>
+ </g>
+</svg>
