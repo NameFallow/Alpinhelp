@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:hint="Поиск по названию..."
-        android:hintTextColor="@color/text_hint"
+        android:textColorHint="@color/text_hint"
         android:textColor="@color/text_primary"
         android:textSize="14sp"
         android:background="@color/navy_card"
