@@ -48,17 +48,19 @@ jobs:
       - name: Show build result
         if: always()
         run: |
-          echo "### AAPT2 errors (raw)" >> $GITHUB_STEP_SUMMARY
-          grep -n "aapt2\|error:\|^e: \|not found\|failed linking\|Aapt2\|w: \|CompilationError" build-output.txt \
-            | grep -v "directory.*not found\|Caching disabled\|Downloading\|Transforming\|Daemon\|aapt2-proto\|aapt2-8\." \
-            | head -60 >> $GITHUB_STEP_SUMMARY || true
+          echo "### Kotlin/AAPT2 errors" >> $GITHUB_STEP_SUMMARY
+          grep -n "^e: \|error:\|FAILED\|Caused by:\|failed linking\|CompilationError" build-output.txt \
+            | grep -v "Caching disabled\|Downloading\|Transforming\|Daemon\|aapt2-proto\|aapt2-8\." \
+            | head -80 >> $GITHUB_STEP_SUMMARY || true
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Tasks + failures" >> $GITHUB_STEP_SUMMARY
-          grep -E "(> Task|FAILED|Caused by:|FAILURE:)" build-output.txt \
-            | head -40 >> $GITHUB_STEP_SUMMARY || true
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build output (last 100 lines)" >> $GITHUB_STEP_SUMMARY
-          tail -100 build-output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo "### Build output (last 150 lines)" >> $GITHUB_STEP_SUMMARY
+          tail -150 build-output.txt >> $GITHUB_STEP_SUMMARY || true
+          # Emit first Kotlin error as a workflow annotation (visible in API)
+          FIRST_ERROR=$(grep -m 3 "^e: \|error: " build-output.txt \
+            | grep -v "Caching\|Download\|Daemon" | head -3 || true)
+          if [ -n "$FIRST_ERROR" ]; then
+            echo "::error::$FIRST_ERROR"
+          fi
 
       - name: Upload build log on failure
         if: failure()
