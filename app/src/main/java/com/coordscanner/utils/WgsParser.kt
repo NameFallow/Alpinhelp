@@ -31,7 +31,8 @@ object WgsParser {
         var prevEnd = 0
 
         while (i < tokens.size) {
-            val lat = tokens[i].value.toDoubleOrNull() ?: run { i++; continue }
+            val lat = tokens[i].value.toDoubleOrNull()
+            if (lat == null) { i++; continue }
             if (lat !in LAT_MIN..LAT_MAX) { i++; continue }
 
             // Ищем долготу в следующих до 5 числах
