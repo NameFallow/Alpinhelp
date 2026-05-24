@@ -38,8 +38,7 @@
             android:paddingVertical="0dp"
             android:inputType="textCapSentences"
             android:imeOptions="actionDone"
-            android:maxLines="1"
-            android:singleLine="true" />
+            android:maxLines="1" />
 
         <TextView
             android:id="@+id/tvCoords"
