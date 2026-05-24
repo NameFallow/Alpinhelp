@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -126,6 +127,13 @@ class ColumnSelectorActivity : AppCompatActivity() {
             v.performClick()
             true
         }
+        binding.seekbarZoom.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) camera?.cameraControl?.setLinearZoom(progress / 100f)
+            }
+            override fun onStartTrackingTouch(sb: SeekBar) {}
+            override fun onStopTrackingTouch(sb: SeekBar) {}
+        })
     }
 
     private fun adjustZoom(factor: Float) {
@@ -152,6 +160,7 @@ class ColumnSelectorActivity : AppCompatActivity() {
                 )
                 camera?.cameraInfo?.zoomState?.observe(this) {
                     binding.tvZoomLevel.text = "%.1f×".format(it.zoomRatio)
+                    binding.seekbarZoom.progress = (it.linearZoom * 100).toInt()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Camera bind failed", e)

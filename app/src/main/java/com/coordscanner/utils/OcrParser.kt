@@ -312,9 +312,9 @@ object OcrParser {
     fun fixCyrillicName(text: String): String {
         val map = mapOf(
             'C' to 'С', 'c' to 'с',
-            'T' to 'Т',
+            'T' to 'Т', 't' to 'т',
             'A' to 'А', 'a' to 'а',
-            'I' to 'И',
+            'I' to 'И', 'i' to 'и',
             'O' to 'О', 'o' to 'о',
             'P' to 'Р', 'p' to 'р',
             'H' to 'Н',
@@ -322,10 +322,21 @@ object OcrParser {
             'B' to 'В',
             'M' to 'М', 'm' to 'м',
             'K' to 'К', 'k' to 'к',
-            'X' to 'Х', 'x' to 'х'
+            'X' to 'Х', 'x' to 'х',
+            // n / п — оба имеют форму дуги/арки
+            'n' to 'п',
+            // y / у — визуально идентичны во многих шрифтах
+            'Y' to 'У', 'y' to 'у',
         )
-        val fixed = text.map { map[it] ?: it }.joinToString("")
-        return fixed.trim().lowercase().replaceFirstChar { it.uppercaseChar() }
+        val fixed = text.map { map[it] ?: it }.joinToString("").trim()
+        // Sentence-case только если весь текст — заглавные буквы (≥4 буквы).
+        // Коды типа «ПТ-12» или «АГ-54» остаются без изменений.
+        val letters = fixed.filter { it.isLetter() }
+        return if (letters.length >= 4 && letters.all { it.isUpperCase() }) {
+            fixed.lowercase().replaceFirstChar { it.uppercaseChar() }
+        } else {
+            fixed.replaceFirstChar { it.uppercaseChar() }
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────

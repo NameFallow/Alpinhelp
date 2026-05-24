@@ -6,7 +6,15 @@ import android.util.Log
 import com.google.mlkit.vision.text.Text
 import kotlin.math.abs
 
-data class MatchedRow(val name: String, val x: Double, val y: Double, val zone: Int)
+data class MatchedRow(
+    val name: String,
+    val x: Double,
+    val y: Double,
+    val zone: Int,
+    val isWgs84: Boolean = false,
+    val lat: Double = 0.0,
+    val lon: Double = 0.0
+)
 
 private data class RowLine(val text: String, val centerY: Int)
 

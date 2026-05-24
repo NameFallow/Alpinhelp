@@ -6,12 +6,12 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -19,20 +19,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import androidx.core.view.doOnLayout
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
-import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
-import com.coordscanner.utils.RowMatcher
+import com.coordscanner.utils.WgsParser
 import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,15 +42,13 @@ class PhotoZoneActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "PhotoZoneActivity"
-        private const val PREFS_NAME = "photo_zone_prefs"
-        private const val KEY_COORD_MODE = "coord_mode"
-        private const val MODE_SK42 = "sk42"
-        private const val MODE_WGS84 = "wgs84"
+        private const val MODE_TEXT  = "text"
+        private const val MODE_TABLE = "table"
     }
 
     private lateinit var binding: ActivityPhotoZoneBinding
     private val viewModel: PointViewModel by viewModels()
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val recognizer  = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
     private var camera: Camera? = null
@@ -60,11 +56,9 @@ class PhotoZoneActivity : AppCompatActivity() {
     private lateinit var scaleGestureDetector: ScaleGestureDetector
 
     private var capturedBitmap: Bitmap? = null
-    private var imageRect = RectF()
-
     private lateinit var adapter: NamedCoordAdapter
 
-    private var coordMode = MODE_SK42
+    private var parseMode = MODE_TEXT  // текст или таблица
 
     // ── Разрешения и галерея ─────────────────────────────────
 
@@ -87,9 +81,6 @@ class PhotoZoneActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPhotoZoneBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        coordMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_COORD_MODE, MODE_SK42) ?: MODE_SK42
 
         setupCamera()
         setupSelectionPanel()
@@ -135,6 +126,13 @@ class PhotoZoneActivity : AppCompatActivity() {
             v.performClick()
             true
         }
+        binding.seekbarZoom.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) camera?.cameraControl?.setLinearZoom(progress / 100f)
+            }
+            override fun onStartTrackingTouch(sb: SeekBar) {}
+            override fun onStopTrackingTouch(sb: SeekBar) {}
+        })
     }
 
     private fun adjustZoom(factor: Float) {
@@ -161,6 +159,7 @@ class PhotoZoneActivity : AppCompatActivity() {
                 )
                 camera?.cameraInfo?.zoomState?.observe(this) {
                     binding.tvZoomLevel.text = "%.1f×".format(it.zoomRatio)
+                    binding.seekbarZoom.progress = (it.linearZoom * 100).toInt()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Camera bind failed", e)
@@ -188,7 +187,7 @@ class PhotoZoneActivity : AppCompatActivity() {
     }
 
     private fun loadFromUri(uri: Uri) {
-        lifecycleScope.launch(Dispatchers.IO) {
+        CoroutineScope(Dispatchers.IO).launch {
             val bmp = runCatching {
                 contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
             }.onFailure { Log.e(TAG, "loadFromUri failed", it) }.getOrNull()
@@ -200,151 +199,62 @@ class PhotoZoneActivity : AppCompatActivity() {
         }
     }
 
-    // ── Фаза 2: выделение зон ────────────────────────────────
+    // ── Фаза 2: выбор режима ─────────────────────────────────
 
     private fun setupSelectionPanel() {
-        binding.btnAddX.setOnClickListener { toggleZoneMode(MultiZoneOverlayView.ZoneType.X) }
-        binding.btnAddY.setOnClickListener { toggleZoneMode(MultiZoneOverlayView.ZoneType.Y) }
+        binding.btnModeText.setOnClickListener  { setMode(MODE_TEXT) }
+        binding.btnModeTable.setOnClickListener { setMode(MODE_TABLE) }
         binding.btnScanZones.setOnClickListener { runOcr() }
-
-        binding.btnCoordMode.setOnClickListener { toggleCoordMode() }
-
-        binding.overlayView.onZoneAdded = { updateSelectionUI() }
-        binding.overlayView.onStateChanged = { updateSelectionUI() }
-        binding.overlayView.onZoneLongPressed = { zone ->
-            binding.overlayView.removeZone(zone.id)
-            updateSelectionUI()
-        }
+        setMode(MODE_TEXT)
     }
 
-    private fun toggleZoneMode(type: MultiZoneOverlayView.ZoneType) {
-        val overlay = binding.overlayView
-        if (!overlay.canAdd(type) && overlay.activeType != type) {
-            Toast.makeText(this, "Максимум ${MultiZoneOverlayView.MAX_PER_TYPE} зон", Toast.LENGTH_SHORT).show()
-            return
+    private fun setMode(mode: String) {
+        parseMode = mode
+        val inactiveColor = ColorStateList.valueOf(Color.TRANSPARENT)
+        if (mode == MODE_TEXT) {
+            binding.btnModeText.backgroundTintList  = ColorStateList.valueOf(0xFF4CAF50.toInt())
+            binding.btnModeText.setTextColor(Color.WHITE)
+            binding.btnModeTable.backgroundTintList = inactiveColor
+            binding.btnModeTable.setTextColor(Color.parseColor("#E53935"))
+            binding.tvParseHint.text = "ТЕКСТ — координаты разбросаны по фото"
+        } else {
+            binding.btnModeTable.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E53935"))
+            binding.btnModeTable.setTextColor(Color.WHITE)
+            binding.btnModeText.backgroundTintList  = inactiveColor
+            binding.btnModeText.setTextColor(Color.parseColor("#4CAF50"))
+            binding.tvParseHint.text = "ТАБЛИЦА — левый столбик шир., правый долг."
         }
-        overlay.activeType = if (overlay.activeType == type) null else type
-        updateSelectionUI()
     }
 
     private fun showSelectionPhase(bitmap: Bitmap) {
         capturedBitmap = bitmap
-        binding.overlayView.clearAll()
-
         binding.ivPhoto.setImageBitmap(bitmap)
-        binding.cameraContainer.visibility = View.GONE
+        binding.cameraContainer.visibility  = View.GONE
         binding.selectionContainer.visibility = View.VISIBLE
         binding.resultsContainer.visibility = View.GONE
-
-        binding.ivPhoto.doOnLayout { computeImageRect(bitmap) }
-        updateSelectionUI()
-    }
-
-    private fun computeImageRect(bitmap: Bitmap) {
-        val vw = binding.ivPhoto.width.toFloat()
-        val vh = binding.ivPhoto.height.toFloat()
-        if (vw == 0f || vh == 0f) return
-
-        val scale = minOf(vw / bitmap.width, vh / bitmap.height)
-        val scaledW = bitmap.width * scale
-        val scaledH = bitmap.height * scale
-        imageRect = RectF(
-            (vw - scaledW) / 2f,
-            (vh - scaledH) / 2f,
-            (vw + scaledW) / 2f,
-            (vh + scaledH) / 2f
-        )
-        binding.overlayView.imageRect = imageRect
-    }
-
-    private fun updateSelectionUI() {
-        val overlay = binding.overlayView
-        val xCount = overlay.xZones().size
-        val yCount = overlay.yZones().size
-        val max = MultiZoneOverlayView.MAX_PER_TYPE
-
-        binding.tvZoneStatus.text = "X: $xCount/$max   Y: $yCount/$max  •  долгое нажатие → удалить"
-
-        val activeType = overlay.activeType
-        styleZoneButton(
-            binding.btnAddX,
-            active = activeType == MultiZoneOverlayView.ZoneType.X,
-            color  = MultiZoneOverlayView.COLOR_X,
-            label  = "+ X ЗОНА"
-        )
-        styleZoneButton(
-            binding.btnAddY,
-            active = activeType == MultiZoneOverlayView.ZoneType.Y,
-            color  = MultiZoneOverlayView.COLOR_Y,
-            label  = "+ Y ЗОНА"
-        )
-
-        binding.tvSelectionStatus.text = when {
-            activeType != null        -> "Нарисуйте прямоугольник вокруг нужной колонки"
-            overlay.hasMinimum()      -> "Зоны выделены. Нажмите СКАН"
-            else                      -> "Нажмите кнопку, затем нарисуйте прямоугольник на фото"
-        }
-
-        binding.btnScanZones.isEnabled = overlay.hasMinimum() && activeType == null
-
-        val modeLabel = if (coordMode == MODE_WGS84) "WGS-84" else "СК-42"
-        binding.btnCoordMode.text = modeLabel
-    }
-
-    private fun styleZoneButton(
-        btn: com.google.android.material.button.MaterialButton,
-        active: Boolean,
-        color: Int,
-        label: String
-    ) {
-        if (active) {
-            btn.backgroundTintList = ColorStateList.valueOf(color)
-            btn.setTextColor(Color.WHITE)
-            btn.text = "✏ ${label.removePrefix("+ ")}"
-        } else {
-            btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
-            btn.setTextColor(color)
-            btn.text = label
-        }
-    }
-
-    private fun toggleCoordMode() {
-        coordMode = if (coordMode == MODE_SK42) MODE_WGS84 else MODE_SK42
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-            .putString(KEY_COORD_MODE, coordMode).apply()
-        updateSelectionUI()
-        updateToggleDisplay()
     }
 
     // ── OCR ──────────────────────────────────────────────────
 
     private fun runOcr() {
         val bitmap = capturedBitmap ?: return
-        val overlay = binding.overlayView
-        if (!overlay.hasMinimum()) return
-
         binding.progressBarOcr.visibility = View.VISIBLE
         binding.btnScanZones.isEnabled = false
 
         recognizer.process(InputImage.fromBitmap(bitmap, 0))
             .addOnSuccessListener { visionText ->
-                val rows = RowMatcher.matchMultiZone(
-                    visionText   = visionText,
-                    bitmapWidth  = bitmap.width,
-                    bitmapHeight = bitmap.height,
-                    xViewRects   = overlay.xRects(),
-                    yViewRects   = overlay.yRects(),
-                    imageViewRect = imageRect
-                )
+                val rows = if (parseMode == MODE_TEXT) {
+                    WgsParser.parseTextMode(visionText.text)
+                } else {
+                    WgsParser.parseTableMode(visionText, bitmap.height)
+                }
                 runOnUiThread {
                     binding.progressBarOcr.visibility = View.GONE
+                    binding.btnScanZones.isEnabled = true
                     if (rows.isEmpty()) {
-                        Toast.makeText(
-                            this,
-                            "Строк не найдено. Проверьте выделенные области.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        binding.btnScanZones.isEnabled = true
+                        Toast.makeText(this,
+                            "Координаты не найдены. Попробуйте другой режим.",
+                            Toast.LENGTH_LONG).show()
                     } else {
                         showResultsPhase(rows)
                     }
@@ -362,10 +272,7 @@ class PhotoZoneActivity : AppCompatActivity() {
     // ── Фаза 3: результаты ───────────────────────────────────
 
     private fun setupResultsPanel() {
-        adapter = NamedCoordAdapter(
-            onSelectionChanged = { updateResultButtons() },
-            showWgs84 = coordMode == MODE_WGS84
-        )
+        adapter = NamedCoordAdapter(onSelectionChanged = { updateResultButtons() }, showWgs84 = true)
         binding.recyclerResults.layoutManager = LinearLayoutManager(this)
         binding.recyclerResults.adapter = adapter
 
@@ -374,44 +281,33 @@ class PhotoZoneActivity : AppCompatActivity() {
         }
 
         binding.btnBackToSelection.setOnClickListener {
-            binding.resultsContainer.visibility = View.GONE
+            binding.resultsContainer.visibility  = View.GONE
             binding.selectionContainer.visibility = View.VISIBLE
-            binding.btnScanZones.isEnabled = binding.overlayView.hasMinimum()
         }
 
-        binding.btnToggleDisplay.setOnClickListener {
-            toggleCoordMode()
-            adapter.showWgs84 = coordMode == MODE_WGS84
-            adapter.notifyDataSetChanged()
-        }
+        // Кнопка переключения отображения не нужна для WGS-84 — прячем её
+        binding.btnToggleDisplay.visibility = View.GONE
 
         binding.btnSaveSelected.setOnClickListener { saveSelected() }
         binding.btnExportGpx.setOnClickListener   { exportGpx() }
     }
 
     private fun showResultsPhase(rows: List<MatchedRow>) {
-        adapter.showWgs84 = coordMode == MODE_WGS84
         adapter.setData(rows)
         binding.checkboxSelectAll.isChecked = true
         binding.selectionContainer.visibility = View.GONE
-        binding.resultsContainer.visibility = View.VISIBLE
+        binding.resultsContainer.visibility  = View.VISIBLE
         updateResultButtons()
-        updateToggleDisplay()
-        Toast.makeText(this, "Найдено строк: ${rows.size}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Найдено точек: ${rows.size}", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateResultButtons() {
         val selected = adapter.getSelectedCount()
         val total    = adapter.getTotalCount()
-        binding.tvResultCount.text = "Знайдено: $total  •  Вибрано: $selected"
-        binding.btnSaveSelected.text = "ЗБЕРЕГТИ ($selected)"
+        binding.tvResultCount.text = "Найдено: $total  •  Выбрано: $selected"
+        binding.btnSaveSelected.text = "СОХРАНИТЬ ($selected)"
         binding.btnSaveSelected.isEnabled = selected > 0
         binding.btnExportGpx.isEnabled   = selected > 0
-    }
-
-    private fun updateToggleDisplay() {
-        val modeLabel = if (coordMode == MODE_WGS84) "WGS-84" else "СК-42"
-        binding.btnToggleDisplay.text = modeLabel
     }
 
     // ── Сохранение и экспорт ─────────────────────────────────
@@ -419,7 +315,7 @@ class PhotoZoneActivity : AppCompatActivity() {
     private fun saveSelected() {
         val rows = adapter.getSelected().ifEmpty { return }
         viewModel.insertAll(rows.map { rowToPoint(it) })
-        Toast.makeText(this, "Збережено ${rows.size} точок", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Сохранено ${rows.size} точек", Toast.LENGTH_LONG).show()
         finish()
     }
 
@@ -428,16 +324,14 @@ class PhotoZoneActivity : AppCompatActivity() {
         GpxExporter.exportAndShare(this, rows.map { rowToPoint(it) })
     }
 
-    private fun rowToPoint(row: MatchedRow): Point {
-        val (lat, lon) = CoordConverter.sk42ToWgs84(row.x, row.y, row.zone)
-        return Point(
+    private fun rowToPoint(row: MatchedRow): Point =
+        Point(
             name     = row.name.ifEmpty { "Точка" },
-            xSk42    = row.x,
-            ySk42    = row.y,
-            zone     = row.zone,
-            latWgs84 = lat,
-            lonWgs84 = lon,
+            xSk42    = 0.0,
+            ySk42    = 0.0,
+            zone     = 0,
+            latWgs84 = row.lat,
+            lonWgs84 = row.lon,
             source   = "scan"
         )
-    }
 }
