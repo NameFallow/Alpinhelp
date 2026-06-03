@@ -41,6 +41,8 @@ jobs:
           chmod +x gradlew
 
       - name: Build Debug APK
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -o pipefail
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-output.txt
@@ -88,3 +90,7 @@ jobs:
             APK для Android 8.0+ (API 26+)
 
             **Установка:** Скачай `app-debug.apk`, разреши установку из неизвестных источников, установи.
+
+            **AI-скан (новое):** На экранах сканирования таблиц появилась подпись «🤖 AI скан».
+            Тап — включить/выключить, долгий тап — ввести ключ Gemini.
+            Бесплатный ключ: aistudio.google.com/app/apikey (1500 запросов/день).

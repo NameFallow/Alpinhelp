@@ -20,9 +20,13 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiPrefs
+import com.coordscanner.utils.AiUi
+import com.coordscanner.utils.GeminiScanner
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
 import com.coordscanner.utils.WgsParser
@@ -205,6 +209,7 @@ class PhotoZoneActivity : AppCompatActivity() {
         binding.btnModeText.setOnClickListener  { setMode(MODE_TEXT) }
         binding.btnModeTable.setOnClickListener { setMode(MODE_TABLE) }
         binding.btnScanZones.setOnClickListener { runOcr() }
+        AiUi.bindAiToggle(this, binding.btnAiToggle)
         setMode(MODE_TEXT)
     }
 
@@ -241,6 +246,14 @@ class PhotoZoneActivity : AppCompatActivity() {
         binding.progressBarOcr.visibility = View.VISIBLE
         binding.btnScanZones.isEnabled = false
 
+        if (AiPrefs.useAi(this) && AiPrefs.hasAnyKey(this)) {
+            runAiOcr(bitmap)
+        } else {
+            runMlKitOcr(bitmap)
+        }
+    }
+
+    private fun runMlKitOcr(bitmap: Bitmap) {
         recognizer.process(InputImage.fromBitmap(bitmap, 0))
             .addOnSuccessListener { visionText ->
                 val rows = if (parseMode == MODE_TEXT) {
@@ -267,6 +280,37 @@ class PhotoZoneActivity : AppCompatActivity() {
                     Toast.makeText(this, "Ошибка OCR: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+    }
+
+    private fun runAiOcr(bitmap: Bitmap) {
+        val key = AiPrefs.effectiveApiKey(this)
+        val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
+        Toast.makeText(this, "🤖 AI-скан…", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val result = runCatching {
+                GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = key)
+            }
+            binding.progressBarOcr.visibility = View.GONE
+            binding.btnScanZones.isEnabled = true
+            result.onSuccess { rows ->
+                if (rows.isEmpty()) {
+                    Toast.makeText(
+                        this@PhotoZoneActivity,
+                        "AI ничего не нашёл. Попробуй другой режим.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    showResultsPhase(rows)
+                }
+            }.onFailure { e ->
+                Log.e(TAG, "AI scan failed", e)
+                Toast.makeText(
+                    this@PhotoZoneActivity,
+                    "AI ошибка: ${e.message?.take(160)}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     // ── Фаза 3: результаты ───────────────────────────────────

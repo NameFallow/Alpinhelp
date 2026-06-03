@@ -25,7 +25,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityColumnSelectorBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiPrefs
+import com.coordscanner.utils.AiUi
 import com.coordscanner.utils.CoordConverter
+import com.coordscanner.utils.GeminiScanner
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
 import com.coordscanner.utils.RowMatcher
@@ -208,6 +211,7 @@ class ColumnSelectorActivity : AppCompatActivity() {
         binding.btnColX.setOnClickListener   { toggleColumnMode(SelectionOverlayView.ColumnType.X) }
         binding.btnColY.setOnClickListener   { toggleColumnMode(SelectionOverlayView.ColumnType.Y) }
         binding.btnScanColumns.setOnClickListener { runOcr() }
+        AiUi.bindAiToggle(this, binding.btnAiToggle)
 
         // Callback: прямоугольник подтверждён (ACTION_UP с нормальным размером)
         binding.overlayView.onRectConfirmed = { _, _ -> updateSelectionUI() }
@@ -325,6 +329,19 @@ class ColumnSelectorActivity : AppCompatActivity() {
         binding.progressBarOcr.visibility = View.VISIBLE
         binding.btnScanColumns.isEnabled = false
 
+        if (AiPrefs.useAi(this) && AiPrefs.hasAnyKey(this)) {
+            runAiOcr(bitmap, nameRect, xRect, yRect)
+        } else {
+            runMlKitOcr(bitmap, nameRect, xRect, yRect)
+        }
+    }
+
+    private fun runMlKitOcr(
+        bitmap: Bitmap,
+        nameRect: RectF,
+        xRect: RectF,
+        yRect: RectF,
+    ) {
         recognizer.process(InputImage.fromBitmap(bitmap, 0))
             .addOnSuccessListener { visionText ->
                 val rows = RowMatcher.match(
@@ -357,6 +374,49 @@ class ColumnSelectorActivity : AppCompatActivity() {
                     Toast.makeText(this, "Ошибка OCR: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+    }
+
+    private fun runAiOcr(
+        bitmap: Bitmap,
+        nameRect: RectF,
+        xRect: RectF,
+        yRect: RectF,
+    ) {
+        val key = AiPrefs.effectiveApiKey(this)
+        Toast.makeText(this, "🤖 AI-скан…", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val result = runCatching {
+                GeminiScanner.scanSk42Columns(
+                    bitmap = bitmap,
+                    nameRect = nameRect,
+                    xRect = xRect,
+                    yRect = yRect,
+                    imageViewRect = imageRect,
+                    apiKey = key,
+                )
+            }
+            binding.progressBarOcr.visibility = View.GONE
+            result.onSuccess { rows ->
+                if (rows.isEmpty()) {
+                    Toast.makeText(
+                        this@ColumnSelectorActivity,
+                        "AI ничего не нашёл. Попробуй обычный скан.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    binding.btnScanColumns.isEnabled = true
+                } else {
+                    showResultsPhase(rows)
+                }
+            }.onFailure { e ->
+                Log.e(TAG, "AI scan failed", e)
+                Toast.makeText(
+                    this@ColumnSelectorActivity,
+                    "AI ошибка: ${e.message?.take(160)}",
+                    Toast.LENGTH_LONG
+                ).show()
+                binding.btnScanColumns.isEnabled = true
+            }
+        }
     }
 
     // ── Фаза 3: результаты ───────────────────────────────────
