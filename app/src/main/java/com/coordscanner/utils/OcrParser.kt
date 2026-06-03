@@ -84,14 +84,34 @@ object OcrParser {
 
     private fun extractNumbers(line: String): List<NumToken> {
         val result = mutableListOf<NumToken>()
-        for (m in NUM_RE.findAll(line)) {
-            val v = m.value
-                .replace(Regex("""[ ,](?=\d{3})"""), "")
-                .replace(",", ".")
-                .toDoubleOrNull() ?: continue
-            if (v >= 100_000.0) result.add(NumToken(v, m.range.first))
+        // OCR часто путает O/0, l/1, S/5 и пр. внутри длинных чисел.
+        // Сначала пробуем строку как есть, затем — с лёгкой нормализацией цифр,
+        // сохраняя позиции исходных вхождений.
+        val sources = listOf(line, line.let { src ->
+            buildString(src.length) {
+                for (ch in src) append(
+                    when (ch) {
+                        'O', 'o', 'О', 'о' -> '0'
+                        'l', 'I', '|'      -> '1'
+                        'S'                -> '5'
+                        'B'                -> '8'
+                        else               -> ch
+                    }
+                )
+            }
+        })
+        val seen = HashSet<Int>()
+        for (src in sources) {
+            for (m in NUM_RE.findAll(src)) {
+                if (!seen.add(m.range.first)) continue
+                val v = m.value
+                    .replace(Regex("""[ ,](?=\d{3})"""), "")
+                    .replace(",", ".")
+                    .toDoubleOrNull() ?: continue
+                if (v >= 100_000.0) result.add(NumToken(v, m.range.first))
+            }
         }
-        return result
+        return result.sortedBy { it.pos }
     }
 
     // ── X=... Y=... labeled pairs ────────────────────────────
@@ -121,11 +141,10 @@ object OcrParser {
     }
 
     // ── Space-separated tables ───────────────────────────────
-    // When a line has 3+ large numbers (e.g. extra column before X and Y),
-    // we try ALL (i,j) pairs and pick the one with the LARGEST gap (y - x).
-    // Rationale: real Y has a zone prefix (7xxxxxx) so Y >> X, giving a
-    // gap of ~2 million. A "wrong" pair from adjacent columns (5.2M, 5.3M)
-    // has a gap of only ~100 k and is never chosen.
+    // Стратегия: X — первое валидное число в строке, Y — следующее.
+    // Это работает и для зон 4-5 (где Y < X), и для зон 6-13 (где Y > X).
+    // Если на строке доминирует одна зона Y (все остальные строки в файле
+    // дают такую же зону), это используем как мягкое подтверждение.
     private fun parseLines(text: String): List<ParsedCoord> {
         val results = mutableListOf<ParsedCoord>()
         val lines = text.lines()
@@ -133,46 +152,43 @@ object OcrParser {
         for ((idx, line) in lines.withIndex()) {
             val nums = extractNumbers(line)
 
-            // Best (X,Y) pair on this line — largest Y−X gap wins
+            // Берём первую пару (i, j=i+1) где i — кандидат X, j — кандидат Y.
+            // Это устойчиво к мусорному большому числу слева (старый код,
+            // выбравший по «max gap», там мог промахнуться).
             var bestCoord: ParsedCoord? = null
-            var bestGap = Double.NEGATIVE_INFINITY
             for (i in nums.indices) {
-                for (j in i + 1 until nums.size) {
-                    val x = nums[i].value; val y = nums[j].value
-                    if (!isValidX(x) || !isValidY(y)) continue
-                    val zone = zoneOf(y) ?: continue
-                    val gap = y - x
-                    if (gap > bestGap) {
-                        bestGap = gap
-                        val firstNumPos = nums[i].pos
-                        val textsBefore = NAME_RE.findAll(line.substring(0, firstNumPos))
-                            .map { it.value }
-                            .filter { it !in SKIP_WORDS && it.length > 1 }
-                            .toList()
-                        val name = textsBefore.lastOrNull()
-                            ?: nameFromPrevLine(lines, idx)
-                        bestCoord = ParsedCoord(name, x, y, zone, textCandidates = textsBefore)
-                    }
-                }
+                val x = nums[i].value
+                if (!isValidX(x)) continue
+                val yTok = nums.drop(i + 1).firstOrNull { isValidY(it.value) } ?: continue
+                val y = yTok.value
+                val zone = zoneOf(y) ?: continue
+                // Защита от слитного дубля: если X и Y отличаются меньше чем
+                // на 100 м — это явно одно и то же число, прочитанное дважды.
+                if (Math.abs(x - y) < 100.0) continue
+
+                val firstNumPos = nums[i].pos
+                val textsBefore = NAME_RE.findAll(line.substring(0, firstNumPos))
+                    .map { it.value }
+                    .filter { it !in SKIP_WORDS && it.length > 1 }
+                    .toList()
+                val name = textsBefore.lastOrNull() ?: nameFromPrevLine(lines, idx)
+                bestCoord = ParsedCoord(name, x, y, zone, textCandidates = textsBefore)
+                break
             }
             if (bestCoord != null) {
-                Log.d(TAG, "Line: '${bestCoord.name}' x=${bestCoord.x} y=${bestCoord.y} gap=${bestGap.toLong()}")
+                Log.d(TAG, "Line: '${bestCoord.name}' x=${bestCoord.x} y=${bestCoord.y} zone=${bestCoord.zone}")
                 results.add(bestCoord)
                 continue
             }
 
-            // X on current line, Y on next line
+            // X на текущей строке, Y — на следующей (двухстрочная запись)
             if (idx < lines.size - 1) {
                 val nextNums = extractNumbers(lines[idx + 1])
                 val x = nums.firstOrNull { isValidX(it.value) }?.value
                 val y = nextNums.firstOrNull { isValidY(it.value) }?.value
                 if (x != null && y != null) {
                     val zone = zoneOf(y) ?: continue
-                    val sameLeading = (x / 1_000_000).toInt() == (y / 1_000_000).toInt()
-                    if (sameLeading && Math.abs(x - y) < 500_000) continue
-                    // Y must be greater than X: real Y carries a zone prefix (e.g. 7×10^6)
-                    // making it substantially larger than the northing X value.
-                    if (y <= x) continue
+                    if (Math.abs(x - y) < 100.0) continue
                     val textsBefore = NAME_RE.findAll(line)
                         .map { it.value }
                         .filter { it !in SKIP_WORDS && it.length > 1 }
@@ -303,6 +319,31 @@ object OcrParser {
         }
 
         return "Точка"
+    }
+
+    // ── Постобработка чисел ──────────────────────────────────
+
+    // ML Kit часто путает в числовых полях буквы и цифры.
+    // Применять ТОЛЬКО к строкам X/Y, никогда к названиям.
+    // Помимо подмены оставляем только цифры, пробелы, запятые и точки —
+    // отбрасываем единицы измерения и прочий мусор после числа.
+    fun normalizeDigits(text: String): String {
+        val map = mapOf(
+            'O' to '0', 'o' to '0', 'О' to '0', 'о' to '0', 'Q' to '0', 'D' to '0',
+            'I' to '1', 'l' to '1', '|' to '1', 'i' to '1', 'L' to '1',
+            'Z' to '2', 'z' to '2',
+            'S' to '5', 's' to '5',
+            'G' to '6', 'b' to '6',
+            'T' to '7', 't' to '7',
+            'B' to '8',
+            'g' to '9', 'q' to '9'
+        )
+        val sb = StringBuilder(text.length)
+        for (ch in text) {
+            val r = map[ch] ?: ch
+            if (r.isDigit() || r == ' ' || r == ',' || r == '.' || r == ' ') sb.append(r)
+        }
+        return sb.toString().trim()
     }
 
     // ── Постобработка кириллицы ──────────────────────────────
