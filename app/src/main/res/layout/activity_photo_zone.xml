@@ -198,11 +198,51 @@
                 android:id="@+id/tvParseHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="WGS-84 • широта 44–50° • долгота 34–39°"
+                android:text="WGS-84 • широта/долгота"
                 android:textColor="#8BB4D8"
                 android:textSize="11sp"
                 android:gravity="center"
                 android:layout_marginBottom="8dp" />
+
+            <!-- Выбор системы координат -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="6dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSysSk42"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="СК-42"
+                    android:textSize="11sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    app:strokeColor="#FF8800"
+                    app:strokeWidth="1.5dp"
+                    android:textColor="#FF8800" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSysWgs"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="WGS-84"
+                    android:textSize="11sp"
+                    android:padding="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    app:strokeColor="#2196F3"
+                    app:strokeWidth="1.5dp"
+                    android:textColor="#2196F3" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"

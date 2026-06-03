@@ -25,9 +25,11 @@ import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
 import com.coordscanner.utils.AiPrefs
+import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
+import com.coordscanner.utils.OcrParser
 import com.coordscanner.utils.WgsParser
 import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
@@ -48,6 +50,8 @@ class PhotoZoneActivity : AppCompatActivity() {
         private const val TAG = "PhotoZoneActivity"
         private const val MODE_TEXT  = "text"
         private const val MODE_TABLE = "table"
+        private const val SYS_SK42 = "sk42"
+        private const val SYS_WGS  = "wgs"
     }
 
     private lateinit var binding: ActivityPhotoZoneBinding
@@ -62,7 +66,8 @@ class PhotoZoneActivity : AppCompatActivity() {
     private var capturedBitmap: Bitmap? = null
     private lateinit var adapter: NamedCoordAdapter
 
-    private var parseMode = MODE_TEXT  // текст или таблица
+    private var parseMode = MODE_TEXT      // текст или таблица
+    private var coordSystem = SYS_WGS      // СК-42 или WGS-84
 
     // ── Разрешения и галерея ─────────────────────────────────
 
@@ -208,8 +213,11 @@ class PhotoZoneActivity : AppCompatActivity() {
     private fun setupSelectionPanel() {
         binding.btnModeText.setOnClickListener  { setMode(MODE_TEXT) }
         binding.btnModeTable.setOnClickListener { setMode(MODE_TABLE) }
+        binding.btnSysSk42.setOnClickListener   { setSystem(SYS_SK42) }
+        binding.btnSysWgs.setOnClickListener    { setSystem(SYS_WGS) }
         binding.btnScanZones.setOnClickListener { runOcr() }
         setMode(MODE_TEXT)
+        setSystem(SYS_WGS)
     }
 
     private fun setMode(mode: String) {
@@ -220,14 +228,36 @@ class PhotoZoneActivity : AppCompatActivity() {
             binding.btnModeText.setTextColor(Color.WHITE)
             binding.btnModeTable.backgroundTintList = inactiveColor
             binding.btnModeTable.setTextColor(Color.parseColor("#E53935"))
-            binding.tvParseHint.text = "ТЕКСТ — координаты разбросаны по фото"
         } else {
             binding.btnModeTable.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E53935"))
             binding.btnModeTable.setTextColor(Color.WHITE)
             binding.btnModeText.backgroundTintList  = inactiveColor
             binding.btnModeText.setTextColor(Color.parseColor("#4CAF50"))
-            binding.tvParseHint.text = "ТАБЛИЦА — левый столбик шир., правый долг."
         }
+        updateHint()
+    }
+
+    private fun setSystem(sys: String) {
+        coordSystem = sys
+        val inactive = ColorStateList.valueOf(Color.TRANSPARENT)
+        if (sys == SYS_SK42) {
+            binding.btnSysSk42.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FF8800"))
+            binding.btnSysSk42.setTextColor(Color.WHITE)
+            binding.btnSysWgs.backgroundTintList  = inactive
+            binding.btnSysWgs.setTextColor(Color.parseColor("#2196F3"))
+        } else {
+            binding.btnSysWgs.backgroundTintList  = ColorStateList.valueOf(Color.parseColor("#2196F3"))
+            binding.btnSysWgs.setTextColor(Color.WHITE)
+            binding.btnSysSk42.backgroundTintList = inactive
+            binding.btnSysSk42.setTextColor(Color.parseColor("#FF8800"))
+        }
+        updateHint()
+    }
+
+    private fun updateHint() {
+        val sys = if (coordSystem == SYS_SK42) "СК-42 • X / Y в метрах" else "WGS-84 • широта / долгота"
+        val mode = if (parseMode == MODE_TEXT) "текст — координаты в строчку" else "таблица — колонками"
+        binding.tvParseHint.text = "$sys  •  $mode"
     }
 
     private fun showSelectionPhase(bitmap: Bitmap) {
@@ -265,21 +295,28 @@ class PhotoZoneActivity : AppCompatActivity() {
         if (AiPrefs.hasKey()) {
             val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
             val rows = runCatching {
-                GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
+                if (coordSystem == SYS_SK42)
+                    GeminiScanner.scanSk42Free(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
+                else
+                    GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
             }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
         }
-        return runMlKitWgs(bitmap)
+        return runMlKitFallback(bitmap)
     }
 
-    private suspend fun runMlKitWgs(bitmap: Bitmap): List<MatchedRow> = withContext(Dispatchers.Default) {
+    private suspend fun runMlKitFallback(bitmap: Bitmap): List<MatchedRow> = withContext(Dispatchers.Default) {
         suspendCancellableCoroutine { cont ->
             recognizer.process(InputImage.fromBitmap(bitmap, 0))
                 .addOnSuccessListener { visionText ->
-                    val rows = if (parseMode == MODE_TEXT) {
-                        WgsParser.parseTextMode(visionText.text)
-                    } else {
-                        WgsParser.parseTableMode(visionText, bitmap.height)
+                    val rows: List<MatchedRow> = when {
+                        coordSystem == SYS_SK42 -> {
+                            OcrParser.parseText(visionText.text)
+                                .filter { !it.isWgs84 }
+                                .map { MatchedRow(name = it.name.ifEmpty { "Точка" }, x = it.x, y = it.y, zone = it.zone) }
+                        }
+                        parseMode == MODE_TEXT  -> WgsParser.parseTextMode(visionText.text)
+                        else                    -> WgsParser.parseTableMode(visionText, bitmap.height)
                     }
                     cont.resume(rows) {}
                 }
@@ -345,14 +382,28 @@ class PhotoZoneActivity : AppCompatActivity() {
         GpxExporter.exportAndShare(this, rows.map { rowToPoint(it) })
     }
 
-    private fun rowToPoint(row: MatchedRow): Point =
-        Point(
-            name     = row.name.ifEmpty { "Точка" },
-            xSk42    = 0.0,
-            ySk42    = 0.0,
-            zone     = 0,
-            latWgs84 = row.lat,
-            lonWgs84 = row.lon,
-            source   = "scan"
-        )
+    private fun rowToPoint(row: MatchedRow): Point {
+        return if (row.isWgs84) {
+            Point(
+                name     = row.name.ifEmpty { "Точка" },
+                xSk42    = 0.0,
+                ySk42    = 0.0,
+                zone     = 0,
+                latWgs84 = row.lat,
+                lonWgs84 = row.lon,
+                source   = "scan"
+            )
+        } else {
+            val (lat, lon) = CoordConverter.sk42ToWgs84(row.x, row.y, row.zone)
+            Point(
+                name     = row.name.ifEmpty { "Точка" },
+                xSk42    = row.x,
+                ySk42    = row.y,
+                zone     = row.zone,
+                latWgs84 = lat,
+                lonWgs84 = lon,
+                source   = "scan"
+            )
+        }
+    }
 }
