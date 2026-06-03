@@ -44,26 +44,17 @@ class MainActivity : AppCompatActivity() {
             adapter.submitList(points)
             binding.emptyState.visibility = if (points.isEmpty()) View.VISIBLE else View.GONE
 
-            val scanned = points.count { it.source == "scan" }
-            val manual = points.count { it.source == "manual" }
-            binding.tvPointCount.text = when {
-                points.isEmpty() -> "Нет точек"
-                else -> "${points.size} точек  •  📷 $scanned скан.  •  ✏️ $manual вручную"
+            binding.tvPointCount.text = if (points.isEmpty()) {
+                "Нет точек"
+            } else {
+                val scanned = points.count { it.source == "scan" }
+                val manual  = points.count { it.source == "manual" }
+                "${points.size} точек  •  $scanned распознано  •  $manual вручную"
             }
         }
 
         binding.btnPhotoBatch.setOnClickListener {
             startActivity(Intent(this, PhotoBatchActivity::class.java))
-        }
-
-        binding.btnGallery.setOnClickListener {
-            startActivity(Intent(this, PhotoBatchActivity::class.java).apply {
-                putExtra(PhotoBatchActivity.EXTRA_GALLERY_ONLY, true)
-            })
-        }
-
-        binding.fab.setOnClickListener {
-            startActivity(Intent(this, AddPointActivity::class.java))
         }
 
         binding.btnPhotoMap.setOnClickListener {
@@ -76,10 +67,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnGpxManager.setOnClickListener {
             startActivity(Intent(this, GpxManagerActivity::class.java))
-        }
-
-        binding.btnConverter.setOnClickListener {
-            startActivity(Intent(this, ConvertActivity::class.java))
         }
 
         binding.btnExportBar.setOnClickListener { exportGpx() }

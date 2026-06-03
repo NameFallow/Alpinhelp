@@ -20,14 +20,13 @@
             app:titleTextColor="@color/white"
             app:subtitleTextColor="@color/text_secondary" />
 
-        <!-- Stats row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:paddingBottom="12dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
             android:gravity="center_vertical">
 
             <TextView
@@ -40,22 +39,21 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- HERO: Фото таблицы (full-width) -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/btnPhotoBatch"
+            android:id="@+id/btnColumnScan"
             android:layout_width="match_parent"
-            android:layout_height="96dp"
+            android:layout_height="72dp"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
-            android:layout_marginBottom="9dp"
+            android:layout_marginBottom="8dp"
             android:clickable="true"
             android:focusable="true"
-            app:cardBackgroundColor="#0C1F2E"
-            app:cardCornerRadius="18dp"
+            app:cardBackgroundColor="@color/navy_card"
+            app:cardCornerRadius="12dp"
             app:cardElevation="0dp"
-            app:strokeColor="#6600BCD4"
+            app:strokeColor="@color/navy_stroke"
             app:strokeWidth="1dp"
-            app:rippleColor="#2500BCD4">
+            app:rippleColor="#1AFFFFFF">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -66,10 +64,10 @@
                 android:paddingEnd="16dp">
 
                 <ImageView
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:src="@drawable/ic_photo_batch"
-                    android:tint="@color/accent"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_select_area"
+                    android:tint="@color/text_primary"
                     android:contentDescription="" />
 
                 <LinearLayout
@@ -77,88 +75,23 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:layout_marginStart="14dp">
+                    android:layout_marginStart="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Фото таблицы"
+                        android:text="Сканировать координаты с названием"
                         android:textColor="@color/white"
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:fontFamily="sans-serif-medium" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Снять таблицу координат СК-42"
+                        android:text="выделить колонки имя / X / Y"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp"
-                        android:layout_marginTop="3dp" />
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:src="@drawable/ic_chevron_right"
-                    android:tint="@color/text_hint"
-                    android:contentDescription="" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Фото карти: геопривязка по опорным точкам -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/btnPhotoMap"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="9dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="#0A1E14"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="0dp"
-            app:strokeColor="#554CAF50"
-            app:strokeWidth="1dp"
-            app:rippleColor="#224CAF50">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingHorizontal="18dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_select_area"
-                    android:tint="@color/scanner_green"
-                    android:contentDescription="" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Фото карти"
-                        android:textColor="@color/white"
-                        android:textSize="13sp"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="геопривязка + координати по тапу"
-                        android:textColor="@color/text_hint"
-                        android:textSize="10sp"
-                        android:layout_marginTop="1dp" />
-
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
 
                 <ImageView
@@ -167,183 +100,201 @@
                     android:src="@drawable/ic_chevron_right"
                     android:tint="@color/text_hint"
                     android:contentDescription="" />
-
             </LinearLayout>
-
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Secondary: Галерея + Вручную -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnPhotoBatch"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="9dp">
+            android:layout_height="72dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/navy_card"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/navy_stroke"
+            app:strokeWidth="1dp"
+            app:rippleColor="#1AFFFFFF">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btnGallery"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="#0B1C1A"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#444CAF50"
-                app:strokeWidth="1dp"
-                app:rippleColor="#224CAF50">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="18dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_photo_batch"
+                    android:tint="@color/text_primary"
+                    android:contentDescription="" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:paddingHorizontal="12dp">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
 
-                    <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:src="@drawable/ic_gallery"
-                        android:tint="@color/scanner_green"
-                        android:contentDescription="" />
-
-                    <LinearLayout
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="9dp">
+                        android:text="Фото таблицы"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Галерея"
-                            android:textColor="@color/white"
-                            android:textSize="13sp"
-                            android:fontFamily="sans-serif-medium" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="из файла"
-                            android:textColor="@color/text_hint"
-                            android:textSize="10sp"
-                            android:layout_marginTop="1dp" />
-                    </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="снять таблицу СК-42"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/fab"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="#0D1B28"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#332196F3"
-                app:strokeWidth="1dp"
-                app:rippleColor="#1A2196F3">
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/text_hint"
+                    android:contentDescription="" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnPhotoMap"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/navy_card"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/navy_stroke"
+            app:strokeWidth="1dp"
+            app:rippleColor="#1AFFFFFF">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="18dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_gallery"
+                    android:tint="@color/text_primary"
+                    android:contentDescription="" />
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:paddingHorizontal="12dp">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
 
-                    <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:src="@drawable/ic_add_manual"
-                        android:tint="@color/primary"
-                        android:contentDescription="" />
-
-                    <LinearLayout
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="9dp">
+                        android:text="Фото с выбором: таблица, текст координаты"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Вручную"
-                            android:textColor="@color/white"
-                            android:textSize="13sp"
-                            android:fontFamily="sans-serif-medium" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="ввести координаты"
-                            android:textColor="@color/text_hint"
-                            android:textSize="10sp"
-                            android:layout_marginTop="1dp" />
-                    </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="WGS-84 — широта/долгота"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
 
-        <!-- Utility: Имена / GPX / Конвертер -->
-        <LinearLayout
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/text_hint"
+                    android:contentDescription="" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnGpxManager"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="12dp">
+            android:layout_height="72dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/navy_card"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/navy_stroke"
+            app:strokeWidth="1dp"
+            app:rippleColor="#1AFFFFFF">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnColumnScan"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="38dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="5dp"
-                android:text="Имена"
-                android:textSize="11sp"
-                android:textColor="#FF8800"
-                android:minWidth="0dp"
-                app:strokeColor="#55FF8800"
-                app:strokeWidth="1dp"
-                app:cornerRadius="10dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="18dp"
+                android:paddingEnd="16dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnGpxManager"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="38dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="5dp"
-                android:text="GPX"
-                android:textSize="11sp"
-                android:textColor="@color/accent"
-                android:minWidth="0dp"
-                app:strokeColor="#5500BCD4"
-                app:strokeWidth="1dp"
-                app:cornerRadius="10dp" />
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/text_primary"
+                    android:contentDescription="" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnConverter"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="38dp"
-                android:layout_weight="1"
-                android:text="Конвертер"
-                android:textSize="11sp"
-                android:textColor="@color/scanner_green"
-                android:minWidth="0dp"
-                app:strokeColor="#554CAF50"
-                app:strokeWidth="1dp"
-                app:cornerRadius="10dp" />
-        </LinearLayout>
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
 
-        <!-- Divider -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GPX менеджер"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="импорт и экспорт KML / KMZ / GPX"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/text_hint"
+                    android:contentDescription="" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -351,7 +302,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Content -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -376,29 +326,21 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📷"
-                android:textSize="56sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
                 android:text="Точек нет"
                 android:textColor="@color/text_secondary"
-                android:textSize="18sp"
-                android:fontFamily="sans-serif-medium"
-                android:layout_marginTop="12dp" />
+                android:textSize="17sp"
+                android:fontFamily="sans-serif-medium" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Нажмите «Фото таблицы»"
+                android:text="Начни с «Фото таблицы»"
                 android:textColor="@color/text_hint"
                 android:textSize="13sp"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Hidden: kept for legacy binding -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnExportBar"
         android:layout_width="wrap_content"
