@@ -25,7 +25,6 @@ import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
 import com.coordscanner.utils.AiPrefs
-import com.coordscanner.utils.AiUi
 import com.coordscanner.utils.GeminiScanner
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
@@ -37,6 +36,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.Executors
@@ -209,7 +209,6 @@ class PhotoZoneActivity : AppCompatActivity() {
         binding.btnModeText.setOnClickListener  { setMode(MODE_TEXT) }
         binding.btnModeTable.setOnClickListener { setMode(MODE_TABLE) }
         binding.btnScanZones.setOnClickListener { runOcr() }
-        AiUi.bindAiToggle(this, binding.btnAiToggle)
         setMode(MODE_TEXT)
     }
 
@@ -246,70 +245,48 @@ class PhotoZoneActivity : AppCompatActivity() {
         binding.progressBarOcr.visibility = View.VISIBLE
         binding.btnScanZones.isEnabled = false
 
-        if (AiPrefs.useAi(this) && AiPrefs.hasAnyKey(this)) {
-            runAiOcr(bitmap)
-        } else {
-            runMlKitOcr(bitmap)
+        lifecycleScope.launch {
+            val rows = scanWgs(bitmap)
+            binding.progressBarOcr.visibility = View.GONE
+            binding.btnScanZones.isEnabled = true
+            if (rows.isEmpty()) {
+                Toast.makeText(
+                    this@PhotoZoneActivity,
+                    "Координаты не найдены. Попробуйте другой режим.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                showResultsPhase(rows)
+            }
         }
     }
 
-    private fun runMlKitOcr(bitmap: Bitmap) {
-        recognizer.process(InputImage.fromBitmap(bitmap, 0))
-            .addOnSuccessListener { visionText ->
-                val rows = if (parseMode == MODE_TEXT) {
-                    WgsParser.parseTextMode(visionText.text)
-                } else {
-                    WgsParser.parseTableMode(visionText, bitmap.height)
-                }
-                runOnUiThread {
-                    binding.progressBarOcr.visibility = View.GONE
-                    binding.btnScanZones.isEnabled = true
-                    if (rows.isEmpty()) {
-                        Toast.makeText(this,
-                            "Координаты не найдены. Попробуйте другой режим.",
-                            Toast.LENGTH_LONG).show()
-                    } else {
-                        showResultsPhase(rows)
-                    }
-                }
-            }
-            .addOnFailureListener { e ->
-                runOnUiThread {
-                    binding.progressBarOcr.visibility = View.GONE
-                    binding.btnScanZones.isEnabled = true
-                    Toast.makeText(this, "Ошибка OCR: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
+    private suspend fun scanWgs(bitmap: Bitmap): List<MatchedRow> {
+        if (AiPrefs.hasKey()) {
+            val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
+            val rows = runCatching {
+                GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
+            }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
+            if (!rows.isNullOrEmpty()) return rows
+        }
+        return runMlKitWgs(bitmap)
     }
 
-    private fun runAiOcr(bitmap: Bitmap) {
-        val key = AiPrefs.effectiveApiKey(this)
-        val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
-        Toast.makeText(this, "🤖 AI-скан…", Toast.LENGTH_SHORT).show()
-        lifecycleScope.launch {
-            val result = runCatching {
-                GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = key)
-            }
-            binding.progressBarOcr.visibility = View.GONE
-            binding.btnScanZones.isEnabled = true
-            result.onSuccess { rows ->
-                if (rows.isEmpty()) {
-                    Toast.makeText(
-                        this@PhotoZoneActivity,
-                        "AI ничего не нашёл. Попробуй другой режим.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                } else {
-                    showResultsPhase(rows)
+    private suspend fun runMlKitWgs(bitmap: Bitmap): List<MatchedRow> = withContext(Dispatchers.Default) {
+        suspendCancellableCoroutine { cont ->
+            recognizer.process(InputImage.fromBitmap(bitmap, 0))
+                .addOnSuccessListener { visionText ->
+                    val rows = if (parseMode == MODE_TEXT) {
+                        WgsParser.parseTextMode(visionText.text)
+                    } else {
+                        WgsParser.parseTableMode(visionText, bitmap.height)
+                    }
+                    cont.resume(rows) {}
                 }
-            }.onFailure { e ->
-                Log.e(TAG, "AI scan failed", e)
-                Toast.makeText(
-                    this@PhotoZoneActivity,
-                    "AI ошибка: ${e.message?.take(160)}",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "ML Kit scan failed", e)
+                    cont.resume(emptyList()) {}
+                }
         }
     }
 

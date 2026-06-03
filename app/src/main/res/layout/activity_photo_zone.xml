@@ -257,21 +257,6 @@
 
             </LinearLayout>
 
-            <!-- AI-режим: тап = вкл/выкл, долгий тап = настройка ключа -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAiToggle"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="34dp"
-                android:layout_marginTop="4dp"
-                android:text="🤖 AI скан: ВЫКЛ  (долгий тап — настройки)"
-                android:textSize="11sp"
-                android:textColor="#7AA0C8"
-                android:textAllCaps="false"
-                android:minHeight="0dp"
-                android:paddingTop="0dp"
-                android:paddingBottom="0dp" />
-
         </LinearLayout>
 
     </LinearLayout>
