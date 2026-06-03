@@ -25,8 +25,8 @@ object GeminiScanner {
     private const val ENDPOINT =
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
-    private const val MAX_SIDE_PX = 1600
-    private const val JPEG_QUALITY = 85
+    private const val MAX_SIDE_PX = 2048
+    private const val JPEG_QUALITY = 90
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -54,23 +54,37 @@ object GeminiScanner {
     ): List<MatchedRow> = withContext(Dispatchers.IO) {
         require(apiKey.isNotBlank()) { "Gemini API ключ не задан" }
 
-        val cropRect = unionBitmapRect(bitmap, listOf(nameRect, xRect, yRect), imageViewRect, paddingFraction = 0.04f)
-        val cropped = cropAndDownscale(bitmap, cropRect)
-        val base64 = encodeJpegBase64(cropped)
+        val full = cropAndDownscale(bitmap, Rect(0, 0, bitmap.width, bitmap.height))
+        val base64 = encodeJpegBase64(full)
+
+        val nameFr = normalizeRect(nameRect, imageViewRect)
+        val xFr    = normalizeRect(xRect,    imageViewRect)
+        val yFr    = normalizeRect(yRect,    imageViewRect)
 
         val prompt = """
-            На изображении — фрагмент таблицы географических координат в системе СК-42 (Гаусса-Крюгера).
-            Структура таблицы (слева направо):
-            - колонка с названием/номером точки,
-            - колонка X — северная координата, обычно 6–8 цифр (например, 6543210),
-            - колонка Y — восточная координата, начинается с номера зоны 4–9 (например, 7654321 или 17654321).
+            На изображении — фотография таблицы координат в системе СК-42 (Гаусса-Крюгера).
+            Пользователь выделил ТРИ колонки, которые его интересуют. Их области заданы в долях от размера изображения (0..1):
 
-            Задача: извлеки ВСЕ строки таблицы как есть, не пропускай, не добавляй лишних.
-            - Игнорируй заголовки и итоговые/служебные строки.
-            - Не бери данные из других колонок таблицы (площадь, дирекционные углы, расстояния и т.д.).
-            - Если в числе встречаются пробелы как разделители тысяч — убери их.
-            - Если название отсутствует или нечитаемо — поставь "Точка".
-            - Цифры распознавай аккуратно: 0/O, 1/I/l, 5/S легко перепутать — проверяй по контексту таблицы.
+            • колонка с названием/номером точки:  ${rectStr(nameFr)}
+            • колонка X (северная):               ${rectStr(xFr)}
+            • колонка Y (восточная):              ${rectStr(yFr)}
+
+            Извлеки строки таблицы СТРОГО из этих трёх колонок. Все остальные колонки игнорируй (высота H, площадь, дирекционные углы, расстояния, отдельная колонка «Зона» — её используй только для поля zone, см. ниже).
+
+            Формат координат:
+            • Цифр в X и Y может быть от 5 до 8 (например, 632214 или 6 183 420.54). Десятичная часть после точки/запятой опциональна.
+            • Y может включать в начале номер зоны (1–2 цифры), тогда Y > 1 000 000 (например 7 413 872 или 17 309 447).
+            • Если в таблице есть отдельная колонка «Зона» — возьми зону оттуда (целое 1..60).
+            • Если зоны нет нигде явно и Y >= 1 000 000 — извлеки её из первой(-ых) цифры(-р) Y.
+            • Если зону определить нельзя — верни zone=0.
+
+            Правила:
+            • Возьми ВСЕ строки таблицы, ничего не пропусти и ничего не выдумай.
+            • Игнорируй строку заголовка и итоговые/служебные строки.
+            • Пробелы между цифрами как разделители тысяч убирай.
+            • Если имя пустое или нечитаемо — "Точка".
+            • Цифры распознавай аккуратно (0/O, 1/I/l, 5/S, 8/B).
+            • Верни числа как числа (не строки): "x": 6183420.54, "y": 7413872.19, "zone": 7.
 
             Верни ТОЛЬКО JSON-массив без пояснений.
         """.trimIndent()
@@ -83,8 +97,9 @@ object GeminiScanner {
                     put("name", JSONObject().put("type", "STRING"))
                     put("x", JSONObject().put("type", "NUMBER"))
                     put("y", JSONObject().put("type", "NUMBER"))
+                    put("zone", JSONObject().put("type", "INTEGER"))
                 })
-                put("required", JSONArray(listOf("name", "x", "y")))
+                put("required", JSONArray(listOf("name", "x", "y", "zone")))
             })
         }
 
@@ -212,10 +227,14 @@ object GeminiScanner {
             val x = o.optDouble("x", Double.NaN)
             val y = o.optDouble("y", Double.NaN)
             if (x.isNaN() || y.isNaN()) continue
-            if (x !in 1_000_000.0..9_999_999.0) continue
-            if (y !in 1_000_000.0..32_999_999.0) continue
-            val zone = (y / 1_000_000).toInt()
-            if (zone !in 1..32) continue
+            if (x !in 10_000.0..99_999_999.0) continue
+            if (y !in 10_000.0..99_999_999.0) continue
+            val zoneFromAi = o.optInt("zone", 0)
+            val zone = when {
+                zoneFromAi in 1..60 -> zoneFromAi
+                y >= 1_000_000.0 -> (y / 1_000_000).toInt().let { if (it in 1..60) it else 0 }
+                else -> 0
+            }
             out += MatchedRow(name = name, x = x, y = y, zone = zone)
         }
         Log.d(TAG, "SK-42 распознано строк: ${out.size}")
@@ -255,6 +274,23 @@ object GeminiScanner {
 
     // ── Кроп и кодирование ──────────────────────────────────────
 
+    private data class NormRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+    private fun normalizeRect(viewRect: RectF, imageViewRect: RectF): NormRect {
+        if (imageViewRect.isEmpty) return NormRect(0f, 0f, 1f, 1f)
+        val w = imageViewRect.width()
+        val h = imageViewRect.height()
+        val l = ((viewRect.left   - imageViewRect.left) / w).coerceIn(0f, 1f)
+        val t = ((viewRect.top    - imageViewRect.top)  / h).coerceIn(0f, 1f)
+        val r = ((viewRect.right  - imageViewRect.left) / w).coerceIn(0f, 1f)
+        val b = ((viewRect.bottom - imageViewRect.top)  / h).coerceIn(0f, 1f)
+        return NormRect(l, t, r, b)
+    }
+
+    private fun rectStr(n: NormRect): String =
+        "left=%.3f top=%.3f right=%.3f bottom=%.3f".format(n.left, n.top, n.right, n.bottom)
+
+    @Suppress("unused")
     private fun unionBitmapRect(
         bitmap: Bitmap,
         viewRects: List<RectF>,

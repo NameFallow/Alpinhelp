@@ -262,30 +262,12 @@ class PhotoZoneActivity : AppCompatActivity() {
     }
 
     private suspend fun scanWgs(bitmap: Bitmap): List<MatchedRow> {
-        val keyLen = AiPrefs.apiKey().length
         if (AiPrefs.hasKey()) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@PhotoZoneActivity, "DBG: AI try (key len=$keyLen)", Toast.LENGTH_SHORT).show()
-            }
             val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
-            val result = runCatching {
+            val rows = runCatching {
                 GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
-            }
-            result.onSuccess { rows ->
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@PhotoZoneActivity, "DBG: AI ok, rows=${rows.size}", Toast.LENGTH_LONG).show()
-                }
-                if (rows.isNotEmpty()) return rows
-            }.onFailure { e ->
-                Log.w(TAG, "primary scan failed, fallback", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@PhotoZoneActivity, "DBG: AI err: ${e.message?.take(120)}", Toast.LENGTH_LONG).show()
-                }
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@PhotoZoneActivity, "DBG: NO KEY in BuildConfig", Toast.LENGTH_LONG).show()
-            }
+            }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
+            if (!rows.isNullOrEmpty()) return rows
         }
         return runMlKitWgs(bitmap)
     }

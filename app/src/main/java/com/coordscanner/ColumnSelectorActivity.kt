@@ -350,12 +350,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
         xRect: RectF,
         yRect: RectF,
     ): List<MatchedRow> {
-        val keyLen = AiPrefs.apiKey().length
         if (AiPrefs.hasKey()) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@ColumnSelectorActivity, "DBG: AI try (key len=$keyLen)", Toast.LENGTH_SHORT).show()
-            }
-            val result = runCatching {
+            val rows = runCatching {
                 GeminiScanner.scanSk42Columns(
                     bitmap = bitmap,
                     nameRect = nameRect,
@@ -364,22 +360,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
                     imageViewRect = imageRect,
                     apiKey = AiPrefs.apiKey(),
                 )
-            }
-            result.onSuccess { rows ->
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ColumnSelectorActivity, "DBG: AI ok, rows=${rows.size}", Toast.LENGTH_LONG).show()
-                }
-                if (rows.isNotEmpty()) return rows
-            }.onFailure { e ->
-                Log.w(TAG, "primary scan failed, fallback", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ColumnSelectorActivity, "DBG: AI err: ${e.message?.take(120)}", Toast.LENGTH_LONG).show()
-                }
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@ColumnSelectorActivity, "DBG: NO KEY in BuildConfig", Toast.LENGTH_LONG).show()
-            }
+            }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
+            if (!rows.isNullOrEmpty()) return rows
         }
         return runMlKitMatch(bitmap, nameRect, xRect, yRect)
     }
