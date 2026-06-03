@@ -14,6 +14,7 @@ if (localProps.exists()) {
 if (geminiKey.isEmpty()) {
     geminiKey = System.getenv("GEMINI_API_KEY") ?: ""
 }
+println "GEMINI_API_KEY: length=${geminiKey.length()} present=${!geminiKey.isEmpty()}"
 
 android {
     namespace 'com.coordscanner'
