@@ -18,15 +18,24 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import android.graphics.Bitmap
+import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.CoordResultAdapter
 import com.coordscanner.databinding.ActivityPhotoBatchBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
+import com.coordscanner.utils.GeminiScanner
 import com.coordscanner.utils.OcrParser
+import com.coordscanner.utils.ParsedCoord
 import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -229,7 +238,7 @@ class PhotoBatchActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     val bmp = BitmapFactory.decodeFile(photoFile.absolutePath)
-                    if (bmp != null) processImage(InputImage.fromBitmap(bmp, 0))
+                    if (bmp != null) processBitmap(bmp)
                     else {
                         binding.progressBar.visibility = View.GONE
                         Toast.makeText(this@PhotoBatchActivity, "Ошибка съёмки", Toast.LENGTH_SHORT).show()
@@ -243,43 +252,69 @@ class PhotoBatchActivity : AppCompatActivity() {
     }
 
     private fun processImageUri(uri: Uri) {
-        try {
-            binding.progressBar.visibility = View.VISIBLE
-            processImage(InputImage.fromFilePath(this, uri))
-        } catch (e: Exception) {
-            binding.progressBar.visibility = View.GONE
-            Toast.makeText(this, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
+        binding.progressBar.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            val bmp = withContext(Dispatchers.IO) {
+                runCatching {
+                    contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                }.getOrNull()
+            }
+            if (bmp != null) {
+                processBitmap(bmp)
+            } else {
+                binding.progressBar.visibility = View.GONE
+                Toast.makeText(this@PhotoBatchActivity, "Не удалось открыть изображение", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    private fun processImage(image: InputImage) {
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                val rawText = visionText.text
-                val parsed = OcrParser.parseText(rawText)
-                val detectedTitle = OcrParser.extractTableTitle(rawText)
-                runOnUiThread {
-                    binding.progressBar.visibility = View.GONE
-                    if (parsed.isNotEmpty()) {
-                        adapter.addAll(parsed)
-                        if (detectedTitle.isNotEmpty() && binding.etBatchName.text.isBlank()) {
-                            binding.etBatchName.setText(detectedTitle)
-                        }
-                        showResults()
-                        Toast.makeText(this, "Найдено: ${parsed.size} координат", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, "Координаты не найдены — попробуйте ближе или другой угол", Toast.LENGTH_LONG).show()
-                        if (galleryOnly) pickImageLauncher.launch("image/*")
-                    }
+    private fun processBitmap(bitmap: Bitmap) {
+        binding.progressBar.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            val (parsed, rawText) = scan(bitmap)
+            binding.progressBar.visibility = View.GONE
+            if (parsed.isNotEmpty()) {
+                adapter.addAll(parsed)
+                val detectedTitle = rawText?.let { OcrParser.extractTableTitle(it) }.orEmpty()
+                if (detectedTitle.isNotEmpty() && binding.etBatchName.text.isBlank()) {
+                    binding.etBatchName.setText(detectedTitle)
                 }
+                showResults()
+                Toast.makeText(this@PhotoBatchActivity, "Найдено: ${parsed.size} координат", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@PhotoBatchActivity,
+                    "Координаты не найдены — попробуйте ближе или другой угол",
+                    Toast.LENGTH_LONG).show()
+                if (galleryOnly) pickImageLauncher.launch("image/*")
             }
-            .addOnFailureListener {
-                runOnUiThread {
-                    binding.progressBar.visibility = View.GONE
-                    Toast.makeText(this, "Ошибка распознавания", Toast.LENGTH_SHORT).show()
-                }
-            }
+        }
     }
+
+    /** Возвращает (распознанные точки, raw-text от ML Kit если шли через него — для заголовка таблицы). */
+    private suspend fun scan(bitmap: Bitmap): Pair<List<ParsedCoord>, String?> {
+        if (AiPrefs.hasKey()) {
+            val aiRows = runCatching {
+                GeminiScanner.scanBatch(bitmap = bitmap, apiKey = AiPrefs.apiKey())
+            }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
+            if (!aiRows.isNullOrEmpty()) return aiRows to null
+        }
+        return runMlKit(bitmap)
+    }
+
+    private suspend fun runMlKit(bitmap: Bitmap): Pair<List<ParsedCoord>, String?> =
+        withContext(Dispatchers.Default) {
+            suspendCancellableCoroutine { cont ->
+                recognizer.process(InputImage.fromBitmap(bitmap, 0))
+                    .addOnSuccessListener { visionText ->
+                        val raw = visionText.text
+                        cont.resume(OcrParser.parseText(raw) to raw) {}
+                    }
+                    .addOnFailureListener { e ->
+                        Log.w(TAG, "ML Kit failed", e)
+                        cont.resume(emptyList<ParsedCoord>() to null) {}
+                    }
+            }
+        }
 
     // ── Results ───────────────────────────────────────────────
 

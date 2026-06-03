@@ -162,6 +162,111 @@ object GeminiScanner {
         parseWgsResponse(json)
     }
 
+    /**
+     * Batch-сканирование фото таблицы без выделения колонок.
+     * Поддерживает обе системы (СК-42 и WGS-84) — AI сам определяет.
+     */
+    suspend fun scanBatch(
+        bitmap: Bitmap,
+        apiKey: String,
+    ): List<ParsedCoord> = withContext(Dispatchers.IO) {
+        require(apiKey.isNotBlank()) { "Gemini API ключ не задан" }
+
+        val full = cropAndDownscale(bitmap, Rect(0, 0, bitmap.width, bitmap.height))
+        val base64 = encodeJpegBase64(full)
+
+        val prompt = """
+            На изображении — фотография таблицы или фрагмента документа с географическими координатами точек.
+            Определи систему координат и извлеки все строки.
+
+            Поддерживаемые системы:
+            • СК-42 (Гаусса-Крюгера): X — северная (5-8 цифр), Y — восточная (5-8 цифр).
+              Y может начинаться с 1–2 цифр зоны (тогда Y > 1 000 000).
+              Если в таблице есть отдельная колонка «Зона» — бери зону оттуда.
+              Если Y >= 1 000 000 и зона не указана — извлеки зону из первой(-ых) цифры(-р) Y.
+              Иначе zone = 0.
+            • WGS-84: широта (lat, -90..90) и долгота (lon, -180..180).
+              Формат может быть десятичный (55.7558) или DMS (55°45'20.9").
+              Приведи к десятичным градусам.
+
+            Для каждой точки верни объект:
+            {
+              "name":    "имя или номер точки (если нет — \"Точка\")",
+              "isWgs84": true для WGS-84, false для СК-42,
+              "x":       X-координата СК-42 в метрах (или 0 для WGS-84),
+              "y":       Y-координата СК-42 в метрах (или 0 для WGS-84),
+              "zone":    номер зоны 1..60 (или 0 если не определена / для WGS-84),
+              "lat":     широта в десятичных градусах (или 0 для СК-42),
+              "lon":     долгота в десятичных градусах (или 0 для СК-42)
+            }
+
+            Правила:
+            • Извлеки ВСЕ строки таблицы, ничего не пропускай и не выдумывай.
+            • Игнорируй заголовки таблицы и итоговые строки.
+            • Игнорируй «лишние» колонки: высота H, площадь, дирекционные углы, расстояния.
+            • Пробелы как разделители тысяч в числах убирай.
+            • Цифры различай аккуратно (0/O, 1/I, 5/S, 8/B).
+            • Если на фото несколько таблиц — бери самую крупную и полную.
+
+            Верни ТОЛЬКО JSON-массив без пояснений.
+        """.trimIndent()
+
+        val schema = JSONObject().apply {
+            put("type", "ARRAY")
+            put("items", JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", JSONObject().apply {
+                    put("name", JSONObject().put("type", "STRING"))
+                    put("isWgs84", JSONObject().put("type", "BOOLEAN"))
+                    put("x", JSONObject().put("type", "NUMBER"))
+                    put("y", JSONObject().put("type", "NUMBER"))
+                    put("zone", JSONObject().put("type", "INTEGER"))
+                    put("lat", JSONObject().put("type", "NUMBER"))
+                    put("lon", JSONObject().put("type", "NUMBER"))
+                })
+                put("required", JSONArray(listOf("name", "isWgs84", "x", "y", "zone", "lat", "lon")))
+            })
+        }
+
+        val json = callGemini(apiKey, prompt, base64, schema)
+        parseBatchResponse(json)
+    }
+
+    private fun parseBatchResponse(json: String): List<ParsedCoord> {
+        val arr = parseArray(json) ?: return emptyList()
+        val out = mutableListOf<ParsedCoord>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val name = o.optString("name", "").trim().ifEmpty { "Точка" }
+            val isWgs = o.optBoolean("isWgs84", false)
+            if (isWgs) {
+                val lat = o.optDouble("lat", Double.NaN)
+                val lon = o.optDouble("lon", Double.NaN)
+                if (lat.isNaN() || lon.isNaN()) continue
+                if (lat !in -90.0..90.0 || lon !in -180.0..180.0) continue
+                out += ParsedCoord(
+                    name = name, x = 0.0, y = 0.0, zone = 0,
+                    isWgs84 = true, lat = lat, lon = lon, system = "WGS-84"
+                )
+            } else {
+                val x = o.optDouble("x", Double.NaN)
+                val y = o.optDouble("y", Double.NaN)
+                if (x.isNaN() || y.isNaN()) continue
+                if (x !in 10_000.0..99_999_999.0) continue
+                if (y !in 10_000.0..99_999_999.0) continue
+                val zoneFromAi = o.optInt("zone", 0)
+                val zone = when {
+                    zoneFromAi in 1..60 -> zoneFromAi
+                    y >= 1_000_000.0 -> (y / 1_000_000).toInt().let { if (it in 1..60) it else 0 }
+                    else -> 0
+                }
+                out += ParsedCoord(name = name, x = x, y = y, zone = zone)
+            }
+        }
+        Log.d(TAG, "Batch распознано точек: ${out.size}")
+        return out
+    }
+
     // ── HTTP ────────────────────────────────────────────────────
 
     private fun callGemini(
