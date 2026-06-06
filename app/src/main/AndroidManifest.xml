@@ -76,6 +76,12 @@
             android:exported="false"
             android:label="Конвертер файлов" />
 
+        <activity
+            android:name=".ManualBulkActivity"
+            android:exported="false"
+            android:label="Ручной ввод таблицей"
+            android:windowSoftInputMode="adjustResize" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

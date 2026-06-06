@@ -3,6 +3,7 @@
     <cache-path name="gpx_files" path="gpx/" />
     <cache-path name="kmz_photos" path="kmz_photos/" />
     <cache-path name="converted" path="converted/" />
+    <cache-path name="kmz_export" path="kmz_export/" />
     <!-- Android 8-9: FileProvider для файлов в Downloads/CoordScanner/ -->
     <external-path name="downloads_coordscanner" path="Download/CoordScanner/" />
 </paths>

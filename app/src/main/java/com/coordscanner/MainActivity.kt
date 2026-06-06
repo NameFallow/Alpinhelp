@@ -53,6 +53,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnManualBulk.setOnClickListener {
+            startActivity(Intent(this, ManualBulkActivity::class.java))
+        }
+
         binding.btnPhotoBatch.setOnClickListener {
             startActivity(Intent(this, PhotoBatchActivity::class.java))
         }
