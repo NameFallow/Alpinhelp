@@ -23,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.coordscanner.databinding.ActivityGpxManagerBinding
 import com.coordscanner.model.WayPoint
+import com.coordscanner.utils.AllFilesAccessHelper
 import com.coordscanner.utils.FileImporter
 import com.coordscanner.utils.FilePickerHelper
 import com.coordscanner.utils.GpxParser
@@ -88,24 +89,23 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         uri?.let { dispatchFile(it) }
     }
 
-    /** Открыть picker — если папка ранее запомнена, сразу в ней; иначе предложить настроить. */
+    /**
+     * Открыть встроенный файловый браузер (видит ВСЁ что видит USB, включая
+     * Android/data/AlpineQuest/). Если нет разрешения MANAGE_EXTERNAL_STORAGE —
+     * сначала предложить включить в настройках.
+     */
     private fun openFileSmart() {
-        val saved = filePickerHelper.getSavedFolder()
-        if (saved != null) {
-            openFileLauncher.launch(saved.uri)
-            return
+        AllFilesAccessHelper.ensureAccess(this) {
+            FileBrowserBottomSheet.show(supportFragmentManager) { file ->
+                dispatchFile(Uri.fromFile(file))
+            }
         }
-        AlertDialog.Builder(this)
-            .setTitle("Откуда брать файлы?")
-            .setMessage(
-                "Указать папку с твоими GPX/KMZ (например внутри AlpineQuest) — " +
-                "и picker всегда будет открываться сразу там? " +
-                "Если нет — откроется обычный обзор."
-            )
-            .setPositiveButton("Указать папку") { _, _ -> filePickerHelper.requestFolderAccess() }
-            .setNegativeButton("Просто обзор") { _, _ -> openFileLauncher.launch(null) }
-            .setNeutralButton("Отмена", null)
-            .show()
+    }
+
+    /** Запасной flow: системный SAF picker (на случай если юзер не дал разрешение). */
+    private fun openFileFallback() {
+        val saved = filePickerHelper.getSavedFolder()
+        openFileLauncher.launch(saved?.uri)
     }
 
     private lateinit var filePickerHelper: FilePickerHelper
@@ -144,8 +144,9 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         b.btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         b.btnOpenFile.setOnClickListener { openFileSmart() }
-        // Long-press — переназначить папку (если хочется сменить ранее выбранную).
-        b.btnOpenFile.setOnLongClickListener { filePickerHelper.requestFolderAccess(); true }
+        // Long-press — запасной системный SAF picker (если по какой-то причине
+        // не дали MANAGE_EXTERNAL_STORAGE и хочется через стандартный обзор).
+        b.btnOpenFile.setOnLongClickListener { openFileFallback(); true }
 
         // Переключатели слоёв карты
         selectLayerChip(R.id.btnChipHybrid)
