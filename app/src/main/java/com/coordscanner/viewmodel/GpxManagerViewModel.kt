@@ -33,6 +33,36 @@ class GpxManagerViewModel : ViewModel() {
         _selected.value = if (addToExisting) (_selected.value.orEmpty() + inside) else inside
     }
 
+    /**
+     * Выделить все точки внутри произвольного полигона (≥3 вершины). Используется
+     * ray-casting (метод чётного пересечения) по координатам lat/lon — для сегодня
+     * (карты до сотни км) погрешность сферичности пренебрежимая.
+     */
+    fun selectInPolygon(vertices: List<org.osmdroid.util.GeoPoint>, addToExisting: Boolean) {
+        if (vertices.size < 3) return
+        val pts = _allPoints.value.orEmpty()
+        val inside = pts.filter { pointInPolygon(it.lat, it.lon, vertices) }.toSet()
+        _selected.value = if (addToExisting) (_selected.value.orEmpty() + inside) else inside
+    }
+
+    private fun pointInPolygon(
+        lat: Double,
+        lon: Double,
+        poly: List<org.osmdroid.util.GeoPoint>,
+    ): Boolean {
+        var inside = false
+        var j = poly.size - 1
+        for (i in poly.indices) {
+            val xi = poly[i].longitude; val yi = poly[i].latitude
+            val xj = poly[j].longitude; val yj = poly[j].latitude
+            val intersect = ((yi > lat) != (yj > lat)) &&
+                (lon < (xj - xi) * (lat - yi) / (yj - yi + 1e-12) + xi)
+            if (intersect) inside = !inside
+            j = i
+        }
+        return inside
+    }
+
     fun clearSelection() { _selected.value = emptySet() }
 
     fun cut() {

@@ -25,7 +25,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityColumnSelectorBinding
 import com.coordscanner.model.Point
-import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
@@ -90,7 +89,6 @@ class ColumnSelectorActivity : AppCompatActivity() {
         setupCamera()
         setupSelectionPanel()
         setupResultsPanel()
-        AiBadge.attach(this, binding.tvAi)
     }
 
     override fun onDestroy() {
@@ -366,13 +364,9 @@ class ColumnSelectorActivity : AppCompatActivity() {
             }
             val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
-            val reason = AiBadge.describe(result.exceptionOrNull())
-            Log.w(TAG, "AI fallback → ML Kit: $reason", result.exceptionOrNull())
-            Toast.makeText(this, "AI не сработал ($reason) — ML Kit", Toast.LENGTH_SHORT).show()
+            Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())
         } else {
-            val why = if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"
-            Log.i(TAG, "AI skipped: $why")
-            Toast.makeText(this, "AI $why — ML Kit", Toast.LENGTH_SHORT).show()
+            Log.i(TAG, "AI skipped: ${if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"}")
         }
         return runMlKitMatch(bitmap, nameRect, xRect, yRect)
     }

@@ -330,4 +330,45 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Плавающие кнопки управления полигональным лассо. Появляются только в режиме выделения. -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnApplyPolygon"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="180dp"
+        android:text="Применить"
+        android:textColor="@color/white"
+        app:icon="@drawable/ic_check"
+        app:iconTint="@color/white"
+        app:iconSize="22dp"
+        app:iconPadding="6dp"
+        app:backgroundTint="@color/scanner_green"
+        app:cornerRadius="24dp"
+        android:visibility="gone"
+        android:elevation="6dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUndoVertex"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="240dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:icon="@drawable/ic_arrow_back"
+        app:iconSize="22dp"
+        app:iconPadding="0dp"
+        app:iconGravity="textStart"
+        app:iconTint="@color/white"
+        app:strokeColor="@color/white"
+        app:backgroundTint="#88000000"
+        app:cornerRadius="24dp"
+        android:visibility="gone"
+        android:elevation="6dp" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

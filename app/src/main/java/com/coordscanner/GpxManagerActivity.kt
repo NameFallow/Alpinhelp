@@ -1,15 +1,21 @@
 package com.coordscanner
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
+import android.provider.DocumentsContract
 import android.util.LruCache
 import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -40,13 +46,44 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
 
     private lateinit var mapView: MapView
     private var markersOverlay = FolderOverlay()
-    private var selectionOverlay: MapSelectionOverlay? = null
+    private var polygonOverlay: MapPolygonOverlay? = null
     private val iconCache = LruCache<String, Drawable>(32)
 
     private var isSelectMode = false
     private var isAddMode = false
 
-    private val openFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    // Расширенный SAF-picker: вызывает системный DocumentsUI с показом всех источников
+    // (внутренняя память, SD, OTG-флешка, Downloads, Google Drive). Начальная папка — Downloads.
+    // Mime-фильтр включает gpx, kml, kmz и xml, плюс wildcard как запасной.
+    private class OpenAdvanced : ActivityResultContract<Unit, Uri?>() {
+        override fun createIntent(context: Context, input: Unit): Intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
+                "application/gpx+xml",
+                "application/vnd.google-earth.kml+xml",
+                "application/vnd.google-earth.kmz",
+                "application/xml",
+                "text/xml",
+                "application/octet-stream",
+                "*/*",
+            ))
+            // Показать «advanced» режим (SD, OTG, скрытые источники).
+            putExtra("android.content.extra.SHOW_ADVANCED", true)
+            putExtra(Intent.EXTRA_LOCAL_ONLY, false)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val downloads = DocumentsContract.buildRootUri(
+                    "com.android.externalstorage.documents", "primary"
+                )
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloads)
+            }
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
+            if (resultCode == Activity.RESULT_OK) intent?.data else null
+    }
+
+    private val openFileLauncher = registerForActivityResult(OpenAdvanced()) { uri ->
         uri?.let { dispatchFile(it) }
     }
 
@@ -85,7 +122,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     private fun setupButtons() {
         b.btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        b.btnOpenFile.setOnClickListener { openFileLauncher.launch(arrayOf("*/*")) }
+        b.btnOpenFile.setOnClickListener { openFileLauncher.launch(Unit) }
         b.btnOpenFile.setOnLongClickListener { filePickerHelper.requestFolderAccess(); true }
 
         // Переключатели слоёв карты
@@ -107,9 +144,15 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         }
 
         b.btnSelectArea.setOnClickListener {
-            if (isSelectMode) disableSelectionMode() else enableSelectionMode(addMode = false)
+            if (isSelectMode) cancelSelectionMode() else enableSelectionMode(addMode = false)
         }
         b.btnAddArea.setOnClickListener { enableSelectionMode(addMode = true) }
+        b.btnApplyPolygon.setOnClickListener { applyPolygon() }
+        b.btnUndoVertex.setOnClickListener {
+            polygonOverlay?.undoLastVertex()
+            mapView.invalidate()
+            updatePolygonToolbar()
+        }
 
         b.btnPaste.setOnClickListener {
             if (vm.isBufferEmpty) { toast("Буфер пуст"); return@setOnClickListener }
@@ -161,48 +204,64 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         }
     }
 
-    // --- Режим выделения ---
+    // --- Режим выделения (полигональное лассо) ---
 
     private fun enableSelectionMode(addMode: Boolean) {
         isSelectMode = true
         isAddMode    = addMode
-        mapView.setMultiTouchControls(false)
+        // multitouch оставляем включённым — pan/zoom карты работает; overlay перехватывает
+        // только короткие тапы без сдвига и ставит вершину.
+        mapView.setMultiTouchControls(true)
 
-        if (selectionOverlay == null) {
-            selectionOverlay = MapSelectionOverlay { box ->
-                onBoxDrawn(box)
-            }
+        if (polygonOverlay == null) {
+            polygonOverlay = MapPolygonOverlay(onVertexAdded = { updatePolygonToolbar() })
         }
-        selectionOverlay!!.reset()
-        if (selectionOverlay !in mapView.overlays) {
-            mapView.overlays.add(selectionOverlay)
+        polygonOverlay!!.clear()
+        if (polygonOverlay !in mapView.overlays) {
+            mapView.overlays.add(polygonOverlay)
         }
         mapView.invalidate()
 
         b.btnSelectArea.text = "✕ Отмена"
         b.btnAddArea.visibility = View.GONE
+        updatePolygonToolbar()
+        toast("Тапай по карте чтобы поставить вершины (от 3-х). Внизу — «Применить».")
     }
 
-    private fun disableSelectionMode() {
+    private fun cancelSelectionMode() {
         isSelectMode = false
         isAddMode    = false
-        mapView.setMultiTouchControls(true)
-        selectionOverlay?.let { mapView.overlays.remove(it) }
+        polygonOverlay?.let { mapView.overlays.remove(it) }
         mapView.invalidate()
 
         val hasSel = vm.selected.value.orEmpty().isNotEmpty()
         b.btnSelectArea.text = if (hasSel) "Выделить ещё" else "Выделить"
         b.btnAddArea.visibility = if (hasSel) View.VISIBLE else View.GONE
+        updatePolygonToolbar()
     }
 
-    private fun onBoxDrawn(box: BoundingBox) {
-        vm.selectInBox(box, addToExisting = isAddMode)
-        disableSelectionMode()
+    private fun applyPolygon() {
+        val verts = polygonOverlay?.getVertices().orEmpty()
+        if (verts.size < 3) {
+            toast("Нужно минимум 3 вершины")
+            return
+        }
+        vm.selectInPolygon(verts, addToExisting = isAddMode)
+        cancelSelectionMode()
 
         val count = vm.selected.value?.size ?: 0
         if (count > 0 && supportFragmentManager.findFragmentByTag("actions") == null) {
             PointsBottomSheet().show(supportFragmentManager, "actions")
         }
+    }
+
+    /** Показать/спрятать FAB «Применить» и «Откатить» по числу вершин и режиму. */
+    private fun updatePolygonToolbar() {
+        val count = polygonOverlay?.vertexCount() ?: 0
+        val showApply = isSelectMode && count >= 3
+        val showUndo  = isSelectMode && count >= 1
+        b.btnApplyPolygon.visibility = if (showApply) View.VISIBLE else View.GONE
+        b.btnUndoVertex.visibility   = if (showUndo)  View.VISIBLE else View.GONE
     }
 
     // --- Маркеры на карте ---
@@ -220,7 +279,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
             markersOverlay.add(m)
         }
         // Маркеры — под оверлеем выделения (если он есть)
-        val selIdx = mapView.overlays.indexOf(selectionOverlay)
+        val selIdx = mapView.overlays.indexOf(polygonOverlay)
         if (selIdx >= 0) mapView.overlays.add(selIdx, markersOverlay)
         else mapView.overlays.add(0, markersOverlay)
         mapView.invalidate()
