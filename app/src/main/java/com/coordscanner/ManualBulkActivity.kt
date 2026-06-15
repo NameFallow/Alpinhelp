@@ -74,6 +74,18 @@ class ManualBulkActivity : AppCompatActivity() {
 
         binding.btnBuild.setOnClickListener { buildTable(silent = false) }
         binding.btnPasteTable.setOnClickListener { showPasteTableDialog() }
+
+        // Авто-сборка: после вставки любого столбика таблица сразу обновляется,
+        // без необходимости жать "Собрать таблицу" вручную.
+        val autoBuild = object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { buildTable(silent = true) }
+        }
+        binding.etNumber.addTextChangedListener(autoBuild)
+        binding.etName.addTextChangedListener(autoBuild)
+        binding.etX.addTextChangedListener(autoBuild)
+        binding.etY.addTextChangedListener(autoBuild)
         binding.btnClearAll.setOnClickListener { clearAll() }
         binding.btnIconForAll.setOnClickListener { pickIconForAll() }
         binding.btnSaveAll.setOnClickListener { saveAllToDb() }
@@ -85,12 +97,12 @@ class ManualBulkActivity : AppCompatActivity() {
     private fun applyMode(mode: String) {
         if (mode == WGS84) {
             binding.toggleCoordMode.check(R.id.btnInputWgs84)
-            binding.tilX.hint = "Широта (по одной на строку)"
-            binding.tilY.hint = "Долгота (по одной на строку)"
+            binding.tilX.hint = "Широта — вставь столбик целиком"
+            binding.tilY.hint = "Долгота — вставь столбик целиком"
         } else {
             binding.toggleCoordMode.check(R.id.btnInputSk42)
-            binding.tilX.hint = "X СК-42 (по одной на строку)"
-            binding.tilY.hint = "Y СК-42 (по одной на строку)"
+            binding.tilX.hint = "X СК-42 — вставь столбик целиком"
+            binding.tilY.hint = "Y СК-42 — вставь столбик целиком"
         }
     }
 
@@ -103,11 +115,12 @@ class ManualBulkActivity : AppCompatActivity() {
         s.replace(',', '.').replace("\\s".toRegex(), "").toDoubleOrNull()
 
     private fun buildTable(silent: Boolean) {
+        val numbers = splitLines(binding.etNumber.text.toString())
         val names = splitLines(binding.etName.text.toString())
         val xs    = splitLines(binding.etX.text.toString())
         val ys    = splitLines(binding.etY.text.toString())
 
-        if (xs.isEmpty() && ys.isEmpty() && names.isEmpty()) {
+        if (xs.isEmpty() && ys.isEmpty() && names.isEmpty() && numbers.isEmpty()) {
             if (!silent) Toast.makeText(this, "Вставь данные в поля", Toast.LENGTH_SHORT).show()
             rows.clear()
             adapter.submit(emptyList())
@@ -119,12 +132,16 @@ class ManualBulkActivity : AppCompatActivity() {
         // пересборке (например при смене СК/WGS) они не сбрасывались.
         val perRowIcon = rows.mapIndexed { i, r -> i to r.icon }.toMap()
 
-        val n = maxOf(names.size, xs.size, ys.size)
+        val n = maxOf(numbers.size, names.size, xs.size, ys.size)
         val mode = CoordsPrefs.getMode(this)
 
         rows.clear()
         for (i in 0 until n) {
-            val name = (names.getOrNull(i)?.takeIf { it.isNotBlank() }) ?: "Точка ${i + 1}"
+            val num  = numbers.getOrNull(i)?.trim().orEmpty()
+            val nm   = names.getOrNull(i)?.trim().orEmpty()
+            val name = listOf(num, nm).filter { it.isNotEmpty() }
+                .joinToString(" ")
+                .ifEmpty { "Точка ${i + 1}" }
             val xRaw = xs.getOrNull(i) ?: ""
             val yRaw = ys.getOrNull(i) ?: ""
             val xv = parseNumber(xRaw)
@@ -171,10 +188,11 @@ class ManualBulkActivity : AppCompatActivity() {
         updateCount()
 
         // Подсказка про рассогласованную длину
-        if (!silent && (names.size != xs.size || xs.size != ys.size)) {
+        val sizes = listOf(numbers.size, names.size, xs.size, ys.size).filter { it > 0 }
+        if (!silent && sizes.toSet().size > 1) {
             Toast.makeText(
                 this,
-                "Длины различаются: имён ${names.size}, X ${xs.size}, Y ${ys.size}",
+                "Длины различаются: № ${numbers.size}, имён ${names.size}, X ${xs.size}, Y ${ys.size}",
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -191,11 +209,12 @@ class ManualBulkActivity : AppCompatActivity() {
     }
 
     // Диалог "Вставить таблицу": юзер кидает прямоугольник из Excel/Calc,
-    // мы автоматически раскидываем по полям etName / etX / etY.
+    // мы автоматически раскидываем по полям etNumber / etName / etX / etY.
     // Правило раскладки строки (TAB-разделитель):
-    //   >=3 колонок — последние 2 это X и Y, остальные склеиваются через пробел в имя
-    //   2 колонки   — X и Y, имя пустое
-    //   1 колонка   — имя, X/Y пустые
+    //   >=4 колонок — №, название (или несколько колонок названия склеиваются), X, Y
+    //   3 колонки   — название, X, Y; номер пустой
+    //   2 колонки   — X, Y; номер и название пустые
+    //   1 колонка   — название; остальное пустое
     private fun showPasteTableDialog() {
         val pad = (resources.displayMetrics.density * 16).toInt()
         val input = android.widget.EditText(this).apply {
@@ -214,7 +233,7 @@ class ManualBulkActivity : AppCompatActivity() {
         }
         AlertDialog.Builder(this)
             .setTitle("Вставить таблицу")
-            .setMessage("Поддерживается формат: №\tназвание\tX\tY (4 колонки), название\tX\tY (3), X\tY (2). Десятичная запятая допустима.")
+            .setMessage("Поддерживается формат: №\tназвание\tX\tY (4 колонки), название\tX\tY (3), X\tY (2), название (1). Десятичная запятая допустима.")
             .setView(input)
             .setPositiveButton("Разложить") { _, _ ->
                 val ok = applyPastedTable(input.text?.toString().orEmpty())
@@ -233,29 +252,40 @@ class ManualBulkActivity : AppCompatActivity() {
             return false
         }
         val rowsParsed = lines.map { ln -> ln.split('\t').map { it.trim() } }
+        val numbers = mutableListOf<String>()
         val names = mutableListOf<String>()
         val xs = mutableListOf<String>()
         val ys = mutableListOf<String>()
         for (row in rowsParsed) {
             when {
-                row.size >= 3 -> {
-                    val name = row.dropLast(2).joinToString(" ").trim()
-                    names.add(name)
+                row.size >= 4 -> {
+                    numbers.add(row[0])
+                    // Если между номером и X несколько колонок названия — склеиваем через пробел.
+                    names.add(row.subList(1, row.size - 2).joinToString(" ").trim())
                     xs.add(row[row.size - 2])
                     ys.add(row[row.size - 1])
                 }
+                row.size == 3 -> {
+                    numbers.add("")
+                    names.add(row[0])
+                    xs.add(row[1])
+                    ys.add(row[2])
+                }
                 row.size == 2 -> {
+                    numbers.add("")
                     names.add("")
                     xs.add(row[0])
                     ys.add(row[1])
                 }
                 else -> {
+                    numbers.add("")
                     names.add(row.getOrNull(0).orEmpty())
                     xs.add("")
                     ys.add("")
                 }
             }
         }
+        binding.etNumber.setText(numbers.joinToString("\n"))
         binding.etName.setText(names.joinToString("\n"))
         binding.etX.setText(xs.joinToString("\n"))
         binding.etY.setText(ys.joinToString("\n"))
@@ -273,6 +303,7 @@ class ManualBulkActivity : AppCompatActivity() {
             .setTitle("Очистить всё?")
             .setMessage("Поля и собранная таблица будут очищены.")
             .setPositiveButton("Очистить") { _, _ ->
+                binding.etNumber.setText("")
                 binding.etName.setText("")
                 binding.etX.setText("")
                 binding.etY.setText("")
