@@ -125,6 +125,30 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         setupMap()
         setupButtons()
         observeViewModel()
+
+        handleIncomingIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    /**
+     * Приём GPX/KML/KMZ из других приложений (AlpineQuest «Поделиться» → CoordScanner,
+     * файловый менеджер «Открыть с помощью» и т.п.). Поддерживает ACTION_VIEW (одиночный
+     * файл по uri) и ACTION_SEND (через EXTRA_STREAM).
+     */
+    private fun handleIncomingIntent(intent: Intent) {
+        val raw: Uri? = when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> @Suppress("DEPRECATION") (intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri)
+            else -> null
+        }
+        val uri = raw ?: return
+        // ACTION_VIEW обычно даёт временный read-grant; persist не нужен для одноразового импорта.
+        dispatchFile(uri)
     }
 
     // --- Карта ---
