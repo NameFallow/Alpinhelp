@@ -38,12 +38,6 @@ object GeminiScanner {
 
     class GeminiException(msg: String) : Exception(msg)
 
-    fun apiKey(userKey: String?): String {
-        val u = userKey?.trim().orEmpty()
-        if (u.isNotEmpty()) return u
-        return BuildConfig.GEMINI_API_KEY
-    }
-
     suspend fun scanSk42Columns(
         bitmap: Bitmap,
         nameRect: RectF,

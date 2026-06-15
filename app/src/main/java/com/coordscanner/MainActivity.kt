@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.PointsAdapter
 import com.coordscanner.databinding.ActivityMainBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordsPrefs
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.viewmodel.PointViewModel
@@ -27,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AiPrefs.init(applicationContext)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)

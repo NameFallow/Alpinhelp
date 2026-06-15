@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.CoordResultAdapter
 import com.coordscanner.databinding.ActivityPhotoBatchBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
@@ -99,6 +100,8 @@ class PhotoBatchActivity : AppCompatActivity() {
         adapter = CoordResultAdapter { updateSaveButton() }
         binding.recyclerResults.layoutManager = LinearLayoutManager(this)
         binding.recyclerResults.adapter = adapter
+
+        AiBadge.attach(this, binding.tvAi)
 
         setupBatchColorPicker()
 
@@ -292,11 +295,20 @@ class PhotoBatchActivity : AppCompatActivity() {
 
     /** Возвращает (распознанные точки, raw-text от ML Kit если шли через него — для заголовка таблицы). */
     private suspend fun scan(bitmap: Bitmap): Pair<List<ParsedCoord>, String?> {
-        if (AiPrefs.hasKey()) {
-            val aiRows = runCatching {
+        if (AiPrefs.isReadyToTry()) {
+            Log.i(TAG, "AI attempt: source=${AiPrefs.source()}")
+            val result = runCatching {
                 GeminiScanner.scanBatch(bitmap = bitmap, apiKey = AiPrefs.apiKey())
-            }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
+            }
+            val aiRows = result.getOrNull()
             if (!aiRows.isNullOrEmpty()) return aiRows to null
+            val reason = AiBadge.describe(result.exceptionOrNull())
+            Log.w(TAG, "AI fallback → ML Kit: $reason", result.exceptionOrNull())
+            Toast.makeText(this, "AI не сработал ($reason) — ML Kit", Toast.LENGTH_SHORT).show()
+        } else {
+            val why = if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"
+            Log.i(TAG, "AI skipped: $why")
+            Toast.makeText(this, "AI $why — ML Kit", Toast.LENGTH_SHORT).show()
         }
         return runMlKit(bitmap)
     }

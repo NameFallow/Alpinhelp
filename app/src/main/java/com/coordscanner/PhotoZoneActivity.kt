@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
@@ -94,6 +95,7 @@ class PhotoZoneActivity : AppCompatActivity() {
         setupCamera()
         setupSelectionPanel()
         setupResultsPanel()
+        AiBadge.attach(this, binding.tvAi)
     }
 
     override fun onDestroy() {
@@ -292,15 +294,24 @@ class PhotoZoneActivity : AppCompatActivity() {
     }
 
     private suspend fun scanWgs(bitmap: Bitmap): List<MatchedRow> {
-        if (AiPrefs.hasKey()) {
+        if (AiPrefs.isReadyToTry()) {
+            Log.i(TAG, "AI attempt: source=${AiPrefs.source()} sys=$coordSystem mode=$parseMode")
             val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
-            val rows = runCatching {
+            val result = runCatching {
                 if (coordSystem == SYS_SK42)
                     GeminiScanner.scanSk42Free(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
                 else
                     GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
-            }.onFailure { Log.w(TAG, "primary scan failed, fallback", it) }.getOrNull()
+            }
+            val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
+            val reason = AiBadge.describe(result.exceptionOrNull())
+            Log.w(TAG, "AI fallback → ML Kit: $reason", result.exceptionOrNull())
+            Toast.makeText(this, "AI не сработал ($reason) — ML Kit", Toast.LENGTH_SHORT).show()
+        } else {
+            val why = if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"
+            Log.i(TAG, "AI skipped: $why")
+            Toast.makeText(this, "AI $why — ML Kit", Toast.LENGTH_SHORT).show()
         }
         return runMlKitFallback(bitmap)
     }
