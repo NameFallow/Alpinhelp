@@ -53,10 +53,12 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     private var isAddMode = false
 
     // Расширенный SAF-picker: вызывает системный DocumentsUI с показом всех источников
-    // (внутренняя память, SD, OTG-флешка, Downloads, Google Drive). Начальная папка — Downloads.
+    // (внутренняя память, SD, OTG-флешка, Downloads, Google Drive). Если переданa initialUri
+    // (через input) — picker откроется сразу в этой папке. Полезно чтобы каждый раз
+    // открываться в папке AlpineQuest которую юзер один раз указал.
     // Mime-фильтр включает gpx, kml, kmz и xml, плюс wildcard как запасной.
-    private class OpenAdvanced : ActivityResultContract<Unit, Uri?>() {
-        override fun createIntent(context: Context, input: Unit): Intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+    private class OpenAdvanced : ActivityResultContract<Uri?, Uri?>() {
+        override fun createIntent(context: Context, input: Uri?): Intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf(
@@ -68,14 +70,13 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
                 "application/octet-stream",
                 "*/*",
             ))
-            // Показать «advanced» режим (SD, OTG, скрытые источники).
             putExtra("android.content.extra.SHOW_ADVANCED", true)
             putExtra(Intent.EXTRA_LOCAL_ONLY, false)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val downloads = DocumentsContract.buildRootUri(
+                val initial = input ?: DocumentsContract.buildRootUri(
                     "com.android.externalstorage.documents", "primary"
                 )
-                putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloads)
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, initial)
             }
         }
 
@@ -87,6 +88,26 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         uri?.let { dispatchFile(it) }
     }
 
+    /** Открыть picker — если папка ранее запомнена, сразу в ней; иначе предложить настроить. */
+    private fun openFileSmart() {
+        val saved = filePickerHelper.getSavedFolder()
+        if (saved != null) {
+            openFileLauncher.launch(saved.uri)
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Откуда брать файлы?")
+            .setMessage(
+                "Указать папку с твоими GPX/KMZ (например внутри AlpineQuest) — " +
+                "и picker всегда будет открываться сразу там? " +
+                "Если нет — откроется обычный обзор."
+            )
+            .setPositiveButton("Указать папку") { _, _ -> filePickerHelper.requestFolderAccess() }
+            .setNegativeButton("Просто обзор") { _, _ -> openFileLauncher.launch(null) }
+            .setNeutralButton("Отмена", null)
+            .show()
+    }
+
     private lateinit var filePickerHelper: FilePickerHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,9 +117,9 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         setContentView(b.root)
 
         filePickerHelper = FilePickerHelper(this) { folder ->
-            toast("Папка выбрана: ${folder.name}")
-            val files = filePickerHelper.listGpxKmzFiles()
-            toast("Найдено файлов: ${files.size}")
+            toast("Папка «${folder.name}» запомнена — открываю файлы")
+            // Сразу запустить обычный picker уже в этой папке.
+            openFileLauncher.launch(folder.uri)
         }
 
         setupMap()
@@ -122,7 +143,8 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     private fun setupButtons() {
         b.btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-        b.btnOpenFile.setOnClickListener { openFileLauncher.launch(Unit) }
+        b.btnOpenFile.setOnClickListener { openFileSmart() }
+        // Long-press — переназначить папку (если хочется сменить ранее выбранную).
         b.btnOpenFile.setOnLongClickListener { filePickerHelper.requestFolderAccess(); true }
 
         // Переключатели слоёв карты
