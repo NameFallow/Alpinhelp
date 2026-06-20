@@ -45,9 +45,13 @@ object AiBadge {
             msg.contains("HTTP 403")      -> "HTTP 403 (ключ/доступ)"
             msg.contains("HTTP 404")      -> "HTTP 404 (модель?)"
             msg.contains("HTTP 429")      -> "HTTP 429 (лимит)"
-            msg.contains("HTTP 5")        -> "сервер Gemini"
+            msg.contains("HTTP 451")      -> "регион заблокирован"
+            msg.contains("HTTP 5")        -> "сервер AI"
             msg.contains("JSON", true)    -> "парсинг JSON"
             msg.contains("candidates")    -> "пустой ответ"
+            msg.contains("Нет ключ")      -> "нет ключа"
+            msg.contains("Нет content")   -> "пустой ответ"
+            msg.contains("Нет choices")   -> "пустой ответ"
             msg.isNotEmpty()              -> msg.take(60)
             else                          -> t.javaClass.simpleName
         }

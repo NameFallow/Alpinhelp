@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityColumnSelectorBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
@@ -362,7 +363,13 @@ class ColumnSelectorActivity : AppCompatActivity() {
             )
             val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
-            Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())
+            val err = result.exceptionOrNull()
+            Log.w(TAG, "AI fallback → ML Kit", err)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@ColumnSelectorActivity,
+                    "AI: ${AiBadge.describe(err)} — пробую ML Kit",
+                    Toast.LENGTH_LONG).show()
+            }
         } else {
             Log.i(TAG, "AI skipped: ${if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"}")
         }

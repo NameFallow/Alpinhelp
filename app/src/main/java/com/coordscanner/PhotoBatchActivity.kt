@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.CoordResultAdapter
 import com.coordscanner.databinding.ActivityPhotoBatchBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
@@ -298,7 +299,13 @@ class PhotoBatchActivity : AppCompatActivity() {
             val result = AiCascade.scanBatch(bitmap = bitmap)
             val aiRows = result.getOrNull()
             if (!aiRows.isNullOrEmpty()) return aiRows to null
-            Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())
+            val err = result.exceptionOrNull()
+            Log.w(TAG, "AI fallback → ML Kit", err)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@PhotoBatchActivity,
+                    "AI: ${AiBadge.describe(err)} — пробую ML Kit",
+                    Toast.LENGTH_LONG).show()
+            }
         } else {
             Log.i(TAG, "AI skipped: ${if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"}")
         }

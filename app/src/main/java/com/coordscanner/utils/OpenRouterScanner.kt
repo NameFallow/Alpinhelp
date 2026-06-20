@@ -18,21 +18,23 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 /**
- * Резервный AI-провайдер — Anthropic Claude.
- * Подключается, когда каскад Gemini-моделей не отвечает.
- * Использует те же промпты (ScanPrompts) и парсеры (ScanParsers), что и Gemini.
+ * Резервный AI-провайдер — OpenRouter (https://openrouter.ai).
+ * Один ключ → доступ к десяткам vision-моделей разных вендоров.
+ * Подключается, когда Anthropic Claude недоступен в регионе или временно лежит.
  */
-object AnthropicScanner {
+object OpenRouterScanner {
 
-    private const val TAG = "AnthropicScanner"
-    private const val ENDPOINT = "https://api.anthropic.com/v1/messages"
-    private const val ANTHROPIC_VERSION = "2023-06-01"
+    private const val TAG = "OpenRouterScanner"
+    private const val ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+    private const val HTTP_REFERER = "https://github.com/NameFallow/Alpinhelp"
+    private const val X_TITLE = "CoordScanner"
 
-    // Каскад моделей Claude с подтверждённым vision-входом.
+    // Каскад моделей OpenRouter: разные вендоры → высокая устойчивость к региональным блокам.
     private val MODEL_CHAIN = listOf(
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "claude-3-haiku-20240307",
+        "openai/gpt-4o-mini",
+        "anthropic/claude-3.5-sonnet",
+        "qwen/qwen-2-vl-72b-instruct",
+        "google/gemini-flash-1.5",
     )
 
     private const val MAX_SIDE_PX = 2048
@@ -45,7 +47,7 @@ object AnthropicScanner {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    class AnthropicException(msg: String) : Exception(msg)
+    class OpenRouterException(msg: String) : Exception(msg)
 
     suspend fun scanSk42Columns(
         bitmap: Bitmap,
@@ -55,12 +57,12 @@ object AnthropicScanner {
         imageViewRect: RectF,
         apiKey: String,
     ): List<MatchedRow> = withContext(Dispatchers.IO) {
-        require(apiKey.isNotBlank()) { "Anthropic API ключ не задан" }
+        require(apiKey.isNotBlank()) { "OpenRouter API ключ не задан" }
         val base64 = encodeJpegBase64(downscale(bitmap))
         val nameFr = ScanPrompts.normalizeRect(nameRect, imageViewRect)
         val xFr    = ScanPrompts.normalizeRect(xRect,    imageViewRect)
         val yFr    = ScanPrompts.normalizeRect(yRect,    imageViewRect)
-        val json = callClaude(apiKey, ScanPrompts.sk42Columns(nameFr, xFr, yFr), base64)
+        val json = callOpenRouter(apiKey, ScanPrompts.sk42Columns(nameFr, xFr, yFr), base64)
         ScanParsers.parseSk42Response(json)
     }
 
@@ -69,13 +71,13 @@ object AnthropicScanner {
         mode: GeminiScanner.WgsMode,
         apiKey: String,
     ): List<MatchedRow> = withContext(Dispatchers.IO) {
-        require(apiKey.isNotBlank()) { "Anthropic API ключ не задан" }
+        require(apiKey.isNotBlank()) { "OpenRouter API ключ не задан" }
         val base64 = encodeJpegBase64(downscale(bitmap))
         val prompt = when (mode) {
             GeminiScanner.WgsMode.TEXT  -> ScanPrompts.wgsText()
             GeminiScanner.WgsMode.TABLE -> ScanPrompts.wgsTable()
         }
-        val json = callClaude(apiKey, prompt, base64)
+        val json = callOpenRouter(apiKey, prompt, base64)
         ScanParsers.parseWgsResponse(json)
     }
 
@@ -84,13 +86,13 @@ object AnthropicScanner {
         mode: GeminiScanner.WgsMode,
         apiKey: String,
     ): List<MatchedRow> = withContext(Dispatchers.IO) {
-        require(apiKey.isNotBlank()) { "Anthropic API ключ не задан" }
+        require(apiKey.isNotBlank()) { "OpenRouter API ключ не задан" }
         val base64 = encodeJpegBase64(downscale(bitmap))
         val prompt = when (mode) {
             GeminiScanner.WgsMode.TEXT  -> ScanPrompts.sk42FreeText()
             GeminiScanner.WgsMode.TABLE -> ScanPrompts.sk42FreeTable()
         }
-        val json = callClaude(apiKey, prompt, base64)
+        val json = callOpenRouter(apiKey, prompt, base64)
         ScanParsers.parseSk42Response(json)
     }
 
@@ -98,29 +100,25 @@ object AnthropicScanner {
         bitmap: Bitmap,
         apiKey: String,
     ): List<ParsedCoord> = withContext(Dispatchers.IO) {
-        require(apiKey.isNotBlank()) { "Anthropic API ключ не задан" }
+        require(apiKey.isNotBlank()) { "OpenRouter API ключ не задан" }
         val base64 = encodeJpegBase64(downscale(bitmap))
-        val json = callClaude(apiKey, ScanPrompts.batch(), base64)
+        val json = callOpenRouter(apiKey, ScanPrompts.batch(), base64)
         ScanParsers.parseBatchResponse(json)
     }
 
     // ── HTTP ────────────────────────────────────────────────────
 
-    private fun callClaude(
+    private fun callOpenRouter(
         apiKey: String,
         prompt: String,
         imageBase64: String,
     ): String {
-        // Claude Messages API: контент — список блоков (image + text).
-        // У Claude нет responseSchema, но JSON-ответ ловим через "Верни ТОЛЬКО JSON-массив"
-        // в промпте + ScanParsers.parseArray, который умеет вычленять массив из обёртки.
+        // OpenAI-совместимый chat completions с image_url (data URI).
         val content = JSONArray()
             .put(JSONObject().apply {
-                put("type", "image")
-                put("source", JSONObject().apply {
-                    put("type", "base64")
-                    put("media_type", "image/jpeg")
-                    put("data", imageBase64)
+                put("type", "image_url")
+                put("image_url", JSONObject().apply {
+                    put("url", "data:image/jpeg;base64,$imageBase64")
                 })
             })
             .put(JSONObject().apply {
@@ -142,8 +140,9 @@ object AnthropicScanner {
             val body = JSONObject(baseBody.toString()).put("model", model).toString()
             val request = Request.Builder()
                 .url(ENDPOINT)
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", ANTHROPIC_VERSION)
+                .header("Authorization", "Bearer $apiKey")
+                .header("HTTP-Referer", HTTP_REFERER)
+                .header("X-Title", X_TITLE)
                 .header("Content-Type", "application/json")
                 .post(body.toRequestBody("application/json".toMediaType()))
                 .build()
@@ -154,28 +153,22 @@ object AnthropicScanner {
                     if (!resp.isSuccessful) {
                         val short = text.take(400)
                         Log.w(TAG, "model $model: HTTP ${resp.code}: $short")
-                        // 401/403 — ошибка ключа, ретрай не поможет.
-                        // 400 может означать невалидный alias модели — продолжаем по каскаду.
+                        // 401/403 — ключ невалиден.
                         if (resp.code in setOf(401, 403)) {
-                            throw AnthropicException("HTTP ${resp.code}: $short")
+                            throw OpenRouterException("HTTP ${resp.code}: $short")
                         }
-                        throw AnthropicException("HTTP ${resp.code}: $short")
+                        throw OpenRouterException("HTTP ${resp.code}: $short")
                     }
                     val root = JSONObject(text)
-                    val contentArr = root.optJSONArray("content")
-                        ?: throw AnthropicException("Нет content в ответе")
-                    if (contentArr.length() == 0) throw AnthropicException("Пустой ответ модели")
-                    val out = StringBuilder()
-                    for (i in 0 until contentArr.length()) {
-                        val block = contentArr.optJSONObject(i) ?: continue
-                        if (block.optString("type") == "text") {
-                            out.append(block.optString("text", ""))
-                        }
-                    }
+                    val choices = root.optJSONArray("choices")
+                        ?: throw OpenRouterException("Нет choices в ответе")
+                    if (choices.length() == 0) throw OpenRouterException("Пустой ответ модели")
+                    val message = choices.getJSONObject(0).getJSONObject("message")
+                    val out = message.optString("content", "")
                     Log.d(TAG, "model $model: ответ получен (${out.length} символов)")
-                    return out.toString()
+                    return out
                 }
-            } catch (e: AnthropicException) {
+            } catch (e: OpenRouterException) {
                 val msg = e.message.orEmpty()
                 if (msg.startsWith("HTTP 401") || msg.startsWith("HTTP 403")) {
                     throw e
@@ -188,7 +181,7 @@ object AnthropicScanner {
             }
         }
 
-        throw lastError ?: AnthropicException("Все модели Anthropic недоступны")
+        throw lastError ?: OpenRouterException("Все модели OpenRouter недоступны")
     }
 
     // ── Кодирование ─────────────────────────────────────────────

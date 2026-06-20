@@ -61,6 +61,31 @@
         android:textSize="11sp"
         android:textColor="?android:attr/textColorSecondary" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Ключ OpenRouter (sk-or-…) — резерв"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/et_openrouter_key"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:hint="оставь пустым — резерв выключен"
+        android:inputType="textPassword"
+        android:textSize="13sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Ключ: openrouter.ai → Keys (один ключ → GPT-4o, Claude, Gemini, Qwen)"
+        android:textSize="11sp"
+        android:textColor="?android:attr/textColorSecondary" />
+
     <!-- Поле Gemini скрыто — провайдер недоступен в регионе. Оставляю в layout
          на случай возврата, но не отображается. -->
     <EditText

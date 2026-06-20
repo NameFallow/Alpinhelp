@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
@@ -302,7 +303,13 @@ class PhotoZoneActivity : AppCompatActivity() {
                 AiCascade.scanWgs(bitmap = bitmap, mode = mode)
             val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
-            Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())
+            val err = result.exceptionOrNull()
+            Log.w(TAG, "AI fallback → ML Kit", err)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@PhotoZoneActivity,
+                    "AI: ${AiBadge.describe(err)} — пробую ML Kit",
+                    Toast.LENGTH_LONG).show()
+            }
         } else {
             Log.i(TAG, "AI skipped: ${if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"}")
         }

@@ -8,6 +8,7 @@ object AiPrefs {
     private const val PREFS = "ai_prefs"
     private const val KEY_USER_KEY = "user_key"
     private const val KEY_ANTHROPIC_USER_KEY = "anthropic_user_key"
+    private const val KEY_OPENROUTER_USER_KEY = "openrouter_user_key"
     private const val KEY_ENABLED  = "enabled"
     private const val KEY_LAST_OK_AT  = "last_ok_at"
     private const val KEY_LAST_ERR_AT = "last_err_at"
@@ -33,11 +34,17 @@ object AiPrefs {
         return if (u.isNotEmpty()) u else BuildConfig.ANTHROPIC_API_KEY
     }
 
+    fun openrouterKey(): String {
+        val u = openrouterUserKeyRaw()
+        return if (u.isNotEmpty()) u else BuildConfig.OPENROUTER_API_KEY
+    }
+
     fun hasKey(): Boolean = apiKey().isNotBlank()
     fun hasAnthropicKey(): Boolean = anthropicKey().isNotBlank()
+    fun hasOpenRouterKey(): Boolean = openrouterKey().isNotBlank()
     fun isEnabled(): Boolean = if (::sp.isInitialized) sp.getBoolean(KEY_ENABLED, true) else true
-    // Gemini в регионе пользователя недоступен — пробуем только при наличии ключа Anthropic.
-    fun isReadyToTry(): Boolean = isEnabled() && hasAnthropicKey()
+    // Gemini в регионе пользователя недоступен — пробуем при наличии любого из резервных ключей.
+    fun isReadyToTry(): Boolean = isEnabled() && (hasAnthropicKey() || hasOpenRouterKey())
 
     fun setUserKey(k: String?) {
         if (!::sp.isInitialized) return
@@ -47,6 +54,11 @@ object AiPrefs {
     fun setAnthropicUserKey(k: String?) {
         if (!::sp.isInitialized) return
         sp.edit().putString(KEY_ANTHROPIC_USER_KEY, k?.trim().orEmpty()).apply()
+    }
+
+    fun setOpenRouterUserKey(k: String?) {
+        if (!::sp.isInitialized) return
+        sp.edit().putString(KEY_OPENROUTER_USER_KEY, k?.trim().orEmpty()).apply()
     }
 
     fun setEnabled(b: Boolean) {
@@ -86,12 +98,15 @@ object AiPrefs {
     fun isActive(): Boolean = isReadyToTry() && runtimeOk()
 
     // Человеческое объяснение, что не так (или OK).
-    fun statusReason(): String = when {
-        !isEnabled()        -> "Выключено пользователем"
-        !hasAnthropicKey()  -> "Нет API-ключа Anthropic Claude"
-        !runtimeOk()        -> "Последняя ошибка: ${lastErrMsg() ?: "неизвестно"}"
-        lastOkAt() == 0L    -> "Готов к работе (вызовов ещё не было)"
-        else                -> "Всё в порядке"
+    fun statusReason(): String {
+        val backup = if (hasOpenRouterKey()) " · резерв: OpenRouter" else ""
+        return when {
+            !isEnabled()                                -> "Выключено пользователем"
+            !hasAnthropicKey() && !hasOpenRouterKey()   -> "Нет API-ключей (Anthropic или OpenRouter)"
+            !runtimeOk()                                -> "Последняя ошибка: ${lastErrMsg() ?: "неизвестно"}$backup"
+            lastOkAt() == 0L                            -> "Готов к работе (вызовов ещё не было)$backup"
+            else                                        -> "Всё в порядке$backup"
+        }
     }
 
     private fun userKeyRaw(): String =
@@ -99,4 +114,7 @@ object AiPrefs {
 
     private fun anthropicUserKeyRaw(): String =
         if (::sp.isInitialized) sp.getString(KEY_ANTHROPIC_USER_KEY, "").orEmpty().trim() else ""
+
+    private fun openrouterUserKeyRaw(): String =
+        if (::sp.isInitialized) sp.getString(KEY_OPENROUTER_USER_KEY, "").orEmpty().trim() else ""
 }

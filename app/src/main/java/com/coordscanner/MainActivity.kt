@@ -125,6 +125,7 @@ class MainActivity : AppCompatActivity() {
 
         val etGemini = view.findViewById<EditText>(R.id.et_gemini_key)
         val etAnthropic = view.findViewById<EditText>(R.id.et_anthropic_key)
+        val etOpenRouter = view.findViewById<EditText>(R.id.et_openrouter_key)
 
         val rg = view.findViewById<RadioGroup>(R.id.rg_cs)
         val rbSk42 = view.findViewById<RadioButton>(R.id.rb_sk42)
@@ -144,8 +145,10 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Сохранить") { _, _ ->
                 val g = etGemini.text.toString().trim()
                 val a = etAnthropic.text.toString().trim()
+                val o = etOpenRouter.text.toString().trim()
                 if (g.isNotEmpty()) AiPrefs.setUserKey(g)
                 if (a.isNotEmpty()) AiPrefs.setAnthropicUserKey(a)
+                if (o.isNotEmpty()) AiPrefs.setOpenRouterUserKey(o)
                 refreshAiStatusBadge()
             }
             .setNegativeButton("Отмена", null)
