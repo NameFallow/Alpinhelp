@@ -40,6 +40,7 @@ object AiBadge {
         return when {
             t is UnknownHostException     -> "нет сети"
             t is SocketTimeoutException   -> "таймаут"
+            msg.contains("credit balance", true) -> "нет кредитов Anthropic"
             msg.contains("HTTP 400")      -> "HTTP 400 (запрос)"
             msg.contains("HTTP 401")      -> "HTTP 401 (ключ?)"
             msg.contains("HTTP 403")      -> "HTTP 403 (ключ/доступ)"

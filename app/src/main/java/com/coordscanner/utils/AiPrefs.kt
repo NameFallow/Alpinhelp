@@ -9,6 +9,7 @@ object AiPrefs {
     private const val KEY_USER_KEY = "user_key"
     private const val KEY_ANTHROPIC_USER_KEY = "anthropic_user_key"
     private const val KEY_OPENROUTER_USER_KEY = "openrouter_user_key"
+    private const val KEY_GROQ_USER_KEY = "groq_user_key"
     private const val KEY_ENABLED  = "enabled"
     private const val KEY_LAST_OK_AT  = "last_ok_at"
     private const val KEY_LAST_ERR_AT = "last_err_at"
@@ -39,12 +40,18 @@ object AiPrefs {
         return if (u.isNotEmpty()) u else BuildConfig.OPENROUTER_API_KEY
     }
 
+    fun groqKey(): String {
+        val u = groqUserKeyRaw()
+        return if (u.isNotEmpty()) u else BuildConfig.GROQ_API_KEY
+    }
+
     fun hasKey(): Boolean = apiKey().isNotBlank()
     fun hasAnthropicKey(): Boolean = anthropicKey().isNotBlank()
     fun hasOpenRouterKey(): Boolean = openrouterKey().isNotBlank()
+    fun hasGroqKey(): Boolean = groqKey().isNotBlank()
     fun isEnabled(): Boolean = if (::sp.isInitialized) sp.getBoolean(KEY_ENABLED, true) else true
-    // Gemini в регионе пользователя недоступен — пробуем при наличии любого из резервных ключей.
-    fun isReadyToTry(): Boolean = isEnabled() && (hasAnthropicKey() || hasOpenRouterKey())
+    // Пробуем при наличии любого ключа.
+    fun isReadyToTry(): Boolean = isEnabled() && (hasAnthropicKey() || hasOpenRouterKey() || hasGroqKey())
 
     fun setUserKey(k: String?) {
         if (!::sp.isInitialized) return
@@ -59,6 +66,11 @@ object AiPrefs {
     fun setOpenRouterUserKey(k: String?) {
         if (!::sp.isInitialized) return
         sp.edit().putString(KEY_OPENROUTER_USER_KEY, k?.trim().orEmpty()).apply()
+    }
+
+    fun setGroqUserKey(k: String?) {
+        if (!::sp.isInitialized) return
+        sp.edit().putString(KEY_GROQ_USER_KEY, k?.trim().orEmpty()).apply()
     }
 
     fun setEnabled(b: Boolean) {
@@ -99,13 +111,17 @@ object AiPrefs {
 
     // Человеческое объяснение, что не так (или OK).
     fun statusReason(): String {
-        val backup = if (hasOpenRouterKey()) " · резерв: OpenRouter" else ""
+        val backups = buildList {
+            if (hasOpenRouterKey()) add("OpenRouter")
+            if (hasGroqKey()) add("Groq")
+        }
+        val backup = if (backups.isNotEmpty()) " · резерв: ${backups.joinToString("/")}" else ""
         return when {
-            !isEnabled()                                -> "Выключено пользователем"
-            !hasAnthropicKey() && !hasOpenRouterKey()   -> "Нет API-ключей (Anthropic или OpenRouter)"
-            !runtimeOk()                                -> "Последняя ошибка: ${lastErrMsg() ?: "неизвестно"}$backup"
-            lastOkAt() == 0L                            -> "Готов к работе (вызовов ещё не было)$backup"
-            else                                        -> "Всё в порядке$backup"
+            !isEnabled()                                                   -> "Выключено пользователем"
+            !hasAnthropicKey() && !hasOpenRouterKey() && !hasGroqKey()     -> "Нет API-ключей (Anthropic / OpenRouter / Groq)"
+            !runtimeOk()                                                   -> "Последняя ошибка: ${lastErrMsg() ?: "неизвестно"}$backup"
+            lastOkAt() == 0L                                               -> "Готов к работе (вызовов ещё не было)$backup"
+            else                                                           -> "Всё в порядке$backup"
         }
     }
 
@@ -117,4 +133,7 @@ object AiPrefs {
 
     private fun openrouterUserKeyRaw(): String =
         if (::sp.isInitialized) sp.getString(KEY_OPENROUTER_USER_KEY, "").orEmpty().trim() else ""
+
+    private fun groqUserKeyRaw(): String =
+        if (::sp.isInitialized) sp.getString(KEY_GROQ_USER_KEY, "").orEmpty().trim() else ""
 }
