@@ -36,7 +36,8 @@ object AiPrefs {
     fun hasKey(): Boolean = apiKey().isNotBlank()
     fun hasAnthropicKey(): Boolean = anthropicKey().isNotBlank()
     fun isEnabled(): Boolean = if (::sp.isInitialized) sp.getBoolean(KEY_ENABLED, true) else true
-    fun isReadyToTry(): Boolean = isEnabled() && hasKey()
+    // Gemini в регионе пользователя недоступен — пробуем только при наличии ключа Anthropic.
+    fun isReadyToTry(): Boolean = isEnabled() && hasAnthropicKey()
 
     fun setUserKey(k: String?) {
         if (!::sp.isInitialized) return
@@ -85,15 +86,12 @@ object AiPrefs {
     fun isActive(): Boolean = isReadyToTry() && runtimeOk()
 
     // Человеческое объяснение, что не так (или OK).
-    fun statusReason(): String {
-        val backup = if (hasAnthropicKey()) " · резерв: Claude" else ""
-        return when {
-            !isEnabled()    -> "Выключено пользователем"
-            !hasKey()       -> "Нет API-ключа Gemini"
-            !runtimeOk()    -> "Последняя ошибка: ${lastErrMsg() ?: "неизвестно"}$backup"
-            lastOkAt() == 0L -> "Готов к работе (вызовов ещё не было)$backup"
-            else            -> "Всё в порядке$backup"
-        }
+    fun statusReason(): String = when {
+        !isEnabled()        -> "Выключено пользователем"
+        !hasAnthropicKey()  -> "Нет API-ключа Anthropic Claude"
+        !runtimeOk()        -> "Последняя ошибка: ${lastErrMsg() ?: "неизвестно"}"
+        lastOkAt() == 0L    -> "Готов к работе (вызовов ещё не было)"
+        else                -> "Всё в порядке"
     }
 
     private fun userKeyRaw(): String =

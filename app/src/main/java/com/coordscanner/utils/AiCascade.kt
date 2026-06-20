@@ -67,37 +67,25 @@ object AiCascade {
 
     // ── Внутреннее ──────────────────────────────────────────────
 
+    // Gemini заблокирован в регионе пользователя — используем только Anthropic.
+    // Аргумент gemini оставлен в API, чтобы не ломать сигнатуры вызовов; не вызывается.
     private suspend fun <T> runChain(
         gemini: suspend () -> T,
         anthropic: suspend (apiKey: String) -> T,
     ): Result<T> {
-        // 1) Gemini (с каскадом моделей внутри).
-        val geminiResult = runCatching { gemini() }
-        geminiResult.onSuccess {
-            AiPrefs.markSuccess()
-            return geminiResult
-        }
-        val geminiError = geminiResult.exceptionOrNull()
-        Log.w(TAG, "Gemini chain failed, пробуем Anthropic", geminiError)
-
-        // 2) Anthropic (если ключ есть).
         val anthropicKey = AiPrefs.anthropicKey()
         if (anthropicKey.isBlank()) {
-            AiPrefs.markError(geminiError)
-            return geminiResult
+            val err = IllegalStateException("Нет ключа Anthropic Claude")
+            AiPrefs.markError(err)
+            return Result.failure(err)
         }
 
-        val anthropicResult = runCatching { anthropic(anthropicKey) }
-        anthropicResult.onSuccess {
-            AiPrefs.markSuccess()
-            return anthropicResult
-        }
-        val anthropicError = anthropicResult.exceptionOrNull()
-        Log.w(TAG, "Anthropic chain failed", anthropicError)
-
-        // Записываем самую свежую ошибку (Anthropic), но возвращаем Gemini-ошибку как первичную
-        // только если Anthropic тоже упал — пусть UI видит самое полезное.
-        AiPrefs.markError(anthropicError ?: geminiError)
-        return anthropicResult
+        val result = runCatching { anthropic(anthropicKey) }
+        result.onSuccess { AiPrefs.markSuccess() }
+              .onFailure {
+                  Log.w(TAG, "Anthropic chain failed", it)
+                  AiPrefs.markError(it)
+              }
+        return result
     }
 }

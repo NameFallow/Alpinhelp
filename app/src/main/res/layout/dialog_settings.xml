@@ -40,24 +40,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Ключ Gemini (AIzaSy…)"
-        android:textSize="13sp"
-        android:textStyle="bold" />
-
-    <EditText
-        android:id="@+id/et_gemini_key"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:hint="оставь пустым — встроенный"
-        android:inputType="textPassword"
-        android:textSize="13sp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="Ключ Anthropic Claude (sk-ant-…) — резерв"
+        android:text="Ключ Anthropic Claude (sk-ant-…)"
         android:textSize="13sp"
         android:textStyle="bold" />
 
@@ -66,9 +49,26 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:hint="оставь пустым — резерв выключен"
+        android:hint="вставь ключ — без него распознавание не работает"
         android:inputType="textPassword"
         android:textSize="13sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Бесплатный ключ: console.anthropic.com → Settings → API Keys"
+        android:textSize="11sp"
+        android:textColor="?android:attr/textColorSecondary" />
+
+    <!-- Поле Gemini скрыто — провайдер недоступен в регионе. Оставляю в layout
+         на случай возврата, но не отображается. -->
+    <EditText
+        android:id="@+id/et_gemini_key"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:inputType="textPassword" />
 
     <View
         android:layout_width="match_parent"
