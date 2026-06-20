@@ -26,10 +26,10 @@ object GroqScanner {
     private const val TAG = "GroqScanner"
     private const val ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 
-    // Vision-модели Groq. Llama 3.2 vision — единственная архитектура с image-входом сейчас.
+    // Vision-модели Groq. llama-3.2-*-vision-preview сняты как decommissioned;
+    // на 2026 единственная актуальная — Llama 4 Scout (17b, 131k контекст).
     private val MODEL_CHAIN = listOf(
-        "llama-3.2-90b-vision-preview",
-        "llama-3.2-11b-vision-preview",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
     )
 
     private const val MAX_SIDE_PX = 2048
