@@ -37,6 +37,15 @@
                 android:text="Нет точек"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvAiStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="🤖 …" />
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView

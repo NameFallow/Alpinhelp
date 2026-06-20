@@ -79,6 +79,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnExportBar.setOnClickListener { exportGpx() }
+
+        binding.tvAiStatus.setOnClickListener { showSettingsDialog() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshAiStatusBadge()
+    }
+
+    private fun refreshAiStatusBadge() {
+        val active = AiPrefs.isActive()
+        binding.tvAiStatus.setText(
+            if (active) R.string.autoscanner_active else R.string.autoscanner_inactive
+        )
+        binding.tvAiStatus.setTextColor(
+            Color.parseColor(if (active) "#2E7D32" else "#C62828")
+        )
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -106,6 +123,9 @@ class MainActivity : AppCompatActivity() {
         }
         tvReason.text = AiPrefs.statusReason()
 
+        val etGemini = view.findViewById<EditText>(R.id.et_gemini_key)
+        val etAnthropic = view.findViewById<EditText>(R.id.et_anthropic_key)
+
         val rg = view.findViewById<RadioGroup>(R.id.rg_cs)
         val rbSk42 = view.findViewById<RadioButton>(R.id.rb_sk42)
         val rbWgs  = view.findViewById<RadioButton>(R.id.rb_wgs)
@@ -121,7 +141,14 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Настройки")
             .setView(view)
-            .setPositiveButton(android.R.string.ok, null)
+            .setPositiveButton("Сохранить") { _, _ ->
+                val g = etGemini.text.toString().trim()
+                val a = etAnthropic.text.toString().trim()
+                if (g.isNotEmpty()) AiPrefs.setUserKey(g)
+                if (a.isNotEmpty()) AiPrefs.setAnthropicUserKey(a)
+                refreshAiStatusBadge()
+            }
+            .setNegativeButton("Отмена", null)
             .show()
     }
 
