@@ -5,14 +5,19 @@ plugins {
 }
 
 def geminiKey = ""
+def anthropicKey = ""
 def localProps = rootProject.file("local.properties")
 if (localProps.exists()) {
     def props = new Properties()
     localProps.withInputStream { props.load(it) }
     geminiKey = props.getProperty("GEMINI_API_KEY", "")
+    anthropicKey = props.getProperty("ANTHROPIC_API_KEY", "")
 }
 if (geminiKey.isEmpty()) {
     geminiKey = System.getenv("GEMINI_API_KEY") ?: ""
+}
+if (anthropicKey.isEmpty()) {
+    anthropicKey = System.getenv("ANTHROPIC_API_KEY") ?: ""
 }
 
 android {
@@ -27,6 +32,7 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "GEMINI_API_KEY", "\"${geminiKey}\""
+        buildConfigField "String", "ANTHROPIC_API_KEY", "\"${anthropicKey}\""
     }
 
     buildTypes {

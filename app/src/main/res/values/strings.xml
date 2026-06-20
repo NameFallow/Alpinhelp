@@ -16,4 +16,8 @@
     <string name="hint_x">X (СК-42)</string>
     <string name="hint_y">Y (СК-42, с номером зоны, напр. 7418954)</string>
     <string name="action_export">Экспорт GPX</string>
+
+    <string name="settings_cs_title">Система координат ввода</string>
+    <string name="autoscanner_active">🤖 CoordScanner работает стабильно</string>
+    <string name="autoscanner_inactive">🤖 CoordScanner работает не стабильно</string>
 </resources>

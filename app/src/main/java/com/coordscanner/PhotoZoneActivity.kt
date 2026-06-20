@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityPhotoZoneBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
@@ -295,12 +296,10 @@ class PhotoZoneActivity : AppCompatActivity() {
         if (AiPrefs.isReadyToTry()) {
             Log.i(TAG, "AI attempt: source=${AiPrefs.source()} sys=$coordSystem mode=$parseMode")
             val mode = if (parseMode == MODE_TEXT) GeminiScanner.WgsMode.TEXT else GeminiScanner.WgsMode.TABLE
-            val result = runCatching {
-                if (coordSystem == SYS_SK42)
-                    GeminiScanner.scanSk42Free(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
-                else
-                    GeminiScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = AiPrefs.apiKey())
-            }
+            val result = if (coordSystem == SYS_SK42)
+                AiCascade.scanSk42Free(bitmap = bitmap, mode = mode)
+            else
+                AiCascade.scanWgs(bitmap = bitmap, mode = mode)
             val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
             Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())

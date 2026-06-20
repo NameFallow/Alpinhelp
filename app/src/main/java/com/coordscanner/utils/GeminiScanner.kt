@@ -22,8 +22,17 @@ import kotlin.math.min
 object GeminiScanner {
 
     private const val TAG = "GeminiScanner"
-    private const val ENDPOINT =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+
+    // Каскад моделей: при сетевом сбое / 429 / 5xx / пустом ответе на первой —
+    // мгновенно дёргаем следующую. Тот же API-ключ для всех.
+    private val MODEL_CHAIN = listOf(
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    )
+
+    private fun endpointFor(model: String) =
+        "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
 
     private const val MAX_SIDE_PX = 2048
     private const val JPEG_QUALITY = 90
@@ -51,37 +60,11 @@ object GeminiScanner {
         val full = cropAndDownscale(bitmap, Rect(0, 0, bitmap.width, bitmap.height))
         val base64 = encodeJpegBase64(full)
 
-        val nameFr = normalizeRect(nameRect, imageViewRect)
-        val xFr    = normalizeRect(xRect,    imageViewRect)
-        val yFr    = normalizeRect(yRect,    imageViewRect)
+        val nameFr = ScanPrompts.normalizeRect(nameRect, imageViewRect)
+        val xFr    = ScanPrompts.normalizeRect(xRect,    imageViewRect)
+        val yFr    = ScanPrompts.normalizeRect(yRect,    imageViewRect)
 
-        val prompt = """
-            На изображении — фотография таблицы координат в системе СК-42 (Гаусса-Крюгера).
-            Пользователь выделил ТРИ колонки, которые его интересуют. Их области заданы в долях от размера изображения (0..1):
-
-            • колонка с названием/номером точки:  ${rectStr(nameFr)}
-            • колонка X (северная):               ${rectStr(xFr)}
-            • колонка Y (восточная):              ${rectStr(yFr)}
-
-            Извлеки строки таблицы СТРОГО из этих трёх колонок. Все остальные колонки игнорируй (высота H, площадь, дирекционные углы, расстояния, отдельная колонка «Зона» — её используй только для поля zone, см. ниже).
-
-            Формат координат:
-            • Цифр в X и Y может быть от 5 до 8 (например, 632214 или 6 183 420.54). Десятичная часть после точки/запятой опциональна.
-            • Y может включать в начале номер зоны (1–2 цифры), тогда Y > 1 000 000 (например 7 413 872 или 17 309 447).
-            • Если в таблице есть отдельная колонка «Зона» — возьми зону оттуда (целое 1..60).
-            • Если зоны нет нигде явно и Y >= 1 000 000 — извлеки её из первой(-ых) цифры(-р) Y.
-            • Если зону определить нельзя — верни zone=0.
-
-            Правила:
-            • Возьми ВСЕ строки таблицы, ничего не пропусти и ничего не выдумай.
-            • Игнорируй строку заголовка и итоговые/служебные строки.
-            • Пробелы между цифрами как разделители тысяч убирай.
-            • Если имя пустое или нечитаемо — "Точка".
-            • Цифры распознавай аккуратно (0/O, 1/I/l, 5/S, 8/B).
-            • Верни числа как числа (не строки): "x": 6183420.54, "y": 7413872.19, "zone": 7.
-
-            Верни ТОЛЬКО JSON-массив без пояснений.
-        """.trimIndent()
+        val prompt = ScanPrompts.sk42Columns(nameFr, xFr, yFr)
 
         val schema = JSONObject().apply {
             put("type", "ARRAY")
@@ -98,7 +81,7 @@ object GeminiScanner {
         }
 
         val json = callGemini(apiKey, prompt, base64, schema)
-        parseSk42Response(json)
+        ScanParsers.parseSk42Response(json)
     }
 
     suspend fun scanWgs(
@@ -112,31 +95,8 @@ object GeminiScanner {
         val base64 = encodeJpegBase64(cropped)
 
         val prompt = when (mode) {
-            WgsMode.TEXT -> """
-                На изображении — фотография с географическими координатами WGS-84 (широта и долгота).
-                Координаты могут быть в любом формате: десятичные градусы (55.7558), градусы-минуты-секунды (55°45'20.9"), или двоеточием (55:45:20.9).
-                Они могут быть рассыпаны по фото (не таблица).
-
-                Задача: извлеки ВСЕ пары координат, приведи их к десятичным градусам.
-                - lat: широта, обычно 40–80 для России, диапазон -90..90.
-                - lon: долгота, обычно 20–180 для России, диапазон -180..180.
-                - Если рядом есть подпись/название точки — используй его. Если нет — "Точка".
-
-                Верни ТОЛЬКО JSON-массив.
-            """.trimIndent()
-
-            WgsMode.TABLE -> """
-                На изображении — таблица координат WGS-84 с двумя колонками: левая = широта, правая = долгота.
-                Возможен дополнительный левый столбец с названием/номером точки — если он есть, используй.
-                Координаты могут быть в десятичных градусах (55.7558) или DMS (55°45'20.9").
-
-                Задача: извлеки ВСЕ строки, приведи координаты к десятичным градусам.
-                - Не пропускай строки. Не выдумывай.
-                - Игнорируй заголовки и итоги.
-                - Если нет имени — "Точка".
-
-                Верни ТОЛЬКО JSON-массив.
-            """.trimIndent()
+            WgsMode.TEXT  -> ScanPrompts.wgsText()
+            WgsMode.TABLE -> ScanPrompts.wgsTable()
         }
 
         val schema = JSONObject().apply {
@@ -153,7 +113,7 @@ object GeminiScanner {
         }
 
         val json = callGemini(apiKey, prompt, base64, schema)
-        parseWgsResponse(json)
+        ScanParsers.parseWgsResponse(json)
     }
 
     /**
@@ -170,44 +130,8 @@ object GeminiScanner {
         val base64 = encodeJpegBase64(full)
 
         val prompt = when (mode) {
-            WgsMode.TEXT -> """
-                На изображении — фотография документа или экрана с координатами в системе СК-42 (Гаусса-Крюгера),
-                записанными НЕ в таблице, а свободным текстом — в строчку или вразброс.
-
-                Формат может быть любым: "X=6183420 Y=7413872", "X 6 183 420 Y 7 413 872",
-                "6183420 7413872", "X: 6183420.54  Y: 7413872.19" и т.п.
-                Иногда X и Y подписаны как «север/восток», «N/E», «х/у», «X/Y».
-
-                Извлеки ВСЕ пары координат на фото.
-
-                • X — северная (5-8 цифр), обычно от 100 000 до 9 999 999.
-                • Y — восточная (5-8 цифр). Если Y >= 1 000 000, первая(-ые) цифра(-ы) — номер зоны (1..60).
-                • Если зону определить нельзя — zone = 0.
-                • Если рядом с парой есть подпись/имя точки — используй; иначе "Точка".
-                • Пробелы как разделители тысяч убирай.
-                • Цифры различай аккуратно (0/O, 1/I, 5/S, 8/B).
-                • Не выдумывай: если в кадре нет валидной пары — верни пустой массив.
-
-                Верни ТОЛЬКО JSON-массив.
-            """.trimIndent()
-
-            WgsMode.TABLE -> """
-                На изображении — таблица координат в системе СК-42 (Гаусса-Крюгера).
-                Колонки слева направо обычно: имя/номер точки → X (северная) → Y (восточная).
-                Возможны лишние колонки: высота H, площадь, дирекционные углы, отдельная колонка «Зона».
-
-                Извлеки ВСЕ строки таблицы.
-                • X и Y могут быть 5-8 цифр (например, 632214 или 6 183 420.54).
-                • Если в таблице есть отдельная колонка «Зона» — бери зону оттуда.
-                • Если зоны нет явно и Y >= 1 000 000 — извлеки зону из первой(-ых) цифры(-р) Y.
-                • Иначе zone = 0.
-                • Пробелы как разделители тысяч убирай.
-                • Игнорируй заголовки, итоговые строки и «лишние» колонки.
-                • Если имя пустое — "Точка".
-                • Цифры различай аккуратно (0/O, 1/I, 5/S, 8/B).
-
-                Верни ТОЛЬКО JSON-массив.
-            """.trimIndent()
+            WgsMode.TEXT  -> ScanPrompts.sk42FreeText()
+            WgsMode.TABLE -> ScanPrompts.sk42FreeTable()
         }
 
         val schema = JSONObject().apply {
@@ -225,7 +149,7 @@ object GeminiScanner {
         }
 
         val json = callGemini(apiKey, prompt, base64, schema)
-        parseSk42Response(json)
+        ScanParsers.parseSk42Response(json)
     }
 
     /**
@@ -241,50 +165,7 @@ object GeminiScanner {
         val full = cropAndDownscale(bitmap, Rect(0, 0, bitmap.width, bitmap.height))
         val base64 = encodeJpegBase64(full)
 
-        val prompt = """
-            На изображении — фотография таблицы координат геодезических точек.
-            Извлеки ВСЕ строки таблицы, СТРОГО соблюдая построчную привязку.
-
-            КРИТИЧЕСКОЕ ПРАВИЛО ПОСТРОЧНОЙ ПРИВЯЗКИ (самое важное):
-            1. Сначала мысленно проведи горизонтальные линии-разделители между строками таблицы.
-            2. Имя точки, X и Y ОДНОЙ точки находятся в ОДНОЙ горизонтальной строке таблицы.
-               Они выровнены по горизонтали — на одной и той же высоте на фото.
-            3. НИКОГДА не бери имя из одной строки, а координаты из соседней — это самая частая ошибка, не повторяй её.
-            4. Если строка переносится или таблица искажена перспективой — соотноси значения по их вертикальной позиции (Y-координате пикселя), а не по близости.
-            5. Обрабатывай строки сверху вниз, в порядке появления на фото. Верни точки в том же порядке.
-            6. Если в строке какое-то значение нечитаемо или отсутствует — лучше пропусти всю строку целиком, чем бери значение из соседней.
-
-            Поддерживаемые системы:
-            • СК-42 (Гаусса-Крюгера): X — северная (5-8 цифр), Y — восточная (5-8 цифр).
-              Y может начинаться с 1–2 цифр зоны (тогда Y > 1 000 000).
-              Если в таблице есть отдельная колонка «Зона» — бери зону оттуда (опять же, из ТОЙ ЖЕ строки).
-              Если Y >= 1 000 000 и зона не указана — извлеки зону из первой(-ых) цифры(-р) Y.
-              Иначе zone = 0.
-            • WGS-84: широта (lat, -90..90) и долгота (lon, -180..180).
-              Формат может быть десятичный (55.7558) или DMS (55°45'20.9").
-              Приведи к десятичным градусам.
-
-            Для каждой точки верни объект:
-            {
-              "name":    "имя или номер точки (если нет — \"Точка\")",
-              "isWgs84": true для WGS-84, false для СК-42,
-              "x":       X-координата СК-42 в метрах (или 0 для WGS-84),
-              "y":       Y-координата СК-42 в метрах (или 0 для WGS-84),
-              "zone":    номер зоны 1..60 (или 0 если не определена / для WGS-84),
-              "lat":     широта в десятичных градусах (или 0 для СК-42),
-              "lon":     долгота в десятичных градусах (или 0 для СК-42)
-            }
-
-            Прочие правила:
-            • Игнорируй заголовки таблицы и итоговые строки.
-            • Игнорируй «лишние» колонки: высота H, площадь, дирекционные углы, расстояния, румбы.
-            • Пробелы как разделители тысяч в числах убирай.
-            • Цифры различай аккуратно (0/O, 1/I, 5/S, 8/B).
-            • Если на фото несколько таблиц — бери самую крупную и полную.
-            • Не выдумывай и не дополняй данные — если строки нет, её нет.
-
-            Верни ТОЛЬКО JSON-массив без пояснений.
-        """.trimIndent()
+        val prompt = ScanPrompts.batch()
 
         val schema = JSONObject().apply {
             put("type", "ARRAY")
@@ -304,42 +185,7 @@ object GeminiScanner {
         }
 
         val json = callGemini(apiKey, prompt, base64, schema)
-        parseBatchResponse(json)
-    }
-
-    private fun parseBatchResponse(json: String): List<ParsedCoord> {
-        val arr = parseArray(json) ?: return emptyList()
-        val out = mutableListOf<ParsedCoord>()
-        for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            val name = o.optString("name", "").trim().ifEmpty { "Точка" }
-            val isWgs = o.optBoolean("isWgs84", false)
-            if (isWgs) {
-                val lat = o.optDouble("lat", Double.NaN)
-                val lon = o.optDouble("lon", Double.NaN)
-                if (lat.isNaN() || lon.isNaN()) continue
-                if (lat !in -90.0..90.0 || lon !in -180.0..180.0) continue
-                out += ParsedCoord(
-                    name = name, x = 0.0, y = 0.0, zone = 0,
-                    isWgs84 = true, lat = lat, lon = lon, system = "WGS-84"
-                )
-            } else {
-                val x = o.optDouble("x", Double.NaN)
-                val y = o.optDouble("y", Double.NaN)
-                if (x.isNaN() || y.isNaN()) continue
-                if (x !in 10_000.0..99_999_999.0) continue
-                if (y !in 10_000.0..99_999_999.0) continue
-                val zoneFromAi = o.optInt("zone", 0)
-                val zone = when {
-                    zoneFromAi in 1..60 -> zoneFromAi
-                    y >= 1_000_000.0 -> (y / 1_000_000).toInt().let { if (it in 1..60) it else 0 }
-                    else -> 0
-                }
-                out += ParsedCoord(name = name, x = x, y = y, zone = zone)
-            }
-        }
-        Log.d(TAG, "Batch распознано точек: ${out.size}")
-        return out
+        ScanParsers.parseBatchResponse(json)
     }
 
     // ── HTTP ────────────────────────────────────────────────────
@@ -366,109 +212,62 @@ object GeminiScanner {
                 put("temperature", 0.1)
             })
         }
+        val bodyStr = body.toString()
 
-        val request = Request.Builder()
-            .url(ENDPOINT)
-            .header("x-goog-api-key", apiKey)
-            .header("Content-Type", "application/json")
-            .post(body.toString().toRequestBody("application/json".toMediaType()))
-            .build()
+        var lastError: Exception? = null
+        for (model in MODEL_CHAIN) {
+            val request = Request.Builder()
+                .url(endpointFor(model))
+                .header("x-goog-api-key", apiKey)
+                .header("Content-Type", "application/json")
+                .post(bodyStr.toRequestBody("application/json".toMediaType()))
+                .build()
 
-        client.newCall(request).execute().use { resp ->
-            val text = resp.body?.string().orEmpty()
-            if (!resp.isSuccessful) {
-                val short = text.take(400)
-                Log.e(TAG, "HTTP ${resp.code}: $short")
-                throw GeminiException("HTTP ${resp.code}: $short")
+            try {
+                client.newCall(request).execute().use { resp ->
+                    val text = resp.body?.string().orEmpty()
+                    if (!resp.isSuccessful) {
+                        val short = text.take(400)
+                        Log.w(TAG, "model $model: HTTP ${resp.code}: $short")
+                        // 400/401/403 — ошибка ключа/запроса, ретрай не поможет.
+                        if (resp.code in setOf(400, 401, 403)) {
+                            throw GeminiException("HTTP ${resp.code}: $short")
+                        }
+                        // 404/429/5xx и прочее — пробуем следующую модель.
+                        throw GeminiException("HTTP ${resp.code}: $short")
+                    }
+                    val root = JSONObject(text)
+                    val candidates = root.optJSONArray("candidates")
+                        ?: throw GeminiException("Нет candidates в ответе")
+                    if (candidates.length() == 0) throw GeminiException("Пустой ответ модели")
+                    val parts = candidates.getJSONObject(0)
+                        .getJSONObject("content")
+                        .getJSONArray("parts")
+                    val out = StringBuilder()
+                    for (i in 0 until parts.length()) {
+                        out.append(parts.getJSONObject(i).optString("text", ""))
+                    }
+                    Log.d(TAG, "model $model: ответ получен (${out.length} символов)")
+                    return out.toString()
+                }
+            } catch (e: GeminiException) {
+                val msg = e.message.orEmpty()
+                // На ошибках ключа/запроса дальше нет смысла перебирать модели.
+                if (msg.startsWith("HTTP 400") || msg.startsWith("HTTP 401") || msg.startsWith("HTTP 403")) {
+                    throw e
+                }
+                lastError = e
+                Log.w(TAG, "model $model failed, trying next: $msg")
+            } catch (e: Exception) {
+                lastError = e
+                Log.w(TAG, "model $model network/IO failed, trying next", e)
             }
-            val root = JSONObject(text)
-            val candidates = root.optJSONArray("candidates")
-                ?: throw GeminiException("Нет candidates в ответе")
-            if (candidates.length() == 0) throw GeminiException("Пустой ответ модели")
-            val parts = candidates.getJSONObject(0)
-                .getJSONObject("content")
-                .getJSONArray("parts")
-            val out = StringBuilder()
-            for (i in 0 until parts.length()) {
-                out.append(parts.getJSONObject(i).optString("text", ""))
-            }
-            return out.toString()
         }
-    }
 
-    // ── Парсинг ─────────────────────────────────────────────────
-
-    private fun parseSk42Response(json: String): List<MatchedRow> {
-        val arr = parseArray(json) ?: return emptyList()
-        val out = mutableListOf<MatchedRow>()
-        for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            val name = o.optString("name", "").trim().ifEmpty { "Точка" }
-            val x = o.optDouble("x", Double.NaN)
-            val y = o.optDouble("y", Double.NaN)
-            if (x.isNaN() || y.isNaN()) continue
-            if (x !in 10_000.0..99_999_999.0) continue
-            if (y !in 10_000.0..99_999_999.0) continue
-            val zoneFromAi = o.optInt("zone", 0)
-            val zone = when {
-                zoneFromAi in 1..60 -> zoneFromAi
-                y >= 1_000_000.0 -> (y / 1_000_000).toInt().let { if (it in 1..60) it else 0 }
-                else -> 0
-            }
-            out += MatchedRow(name = name, x = x, y = y, zone = zone)
-        }
-        Log.d(TAG, "SK-42 распознано строк: ${out.size}")
-        return out
-    }
-
-    private fun parseWgsResponse(json: String): List<MatchedRow> {
-        val arr = parseArray(json) ?: return emptyList()
-        val out = mutableListOf<MatchedRow>()
-        for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            val name = o.optString("name", "").trim().ifEmpty { "Точка" }
-            val lat = o.optDouble("lat", Double.NaN)
-            val lon = o.optDouble("lon", Double.NaN)
-            if (lat.isNaN() || lon.isNaN()) continue
-            if (lat !in -90.0..90.0) continue
-            if (lon !in -180.0..180.0) continue
-            out += MatchedRow(name = name, x = 0.0, y = 0.0, zone = 0, isWgs84 = true, lat = lat, lon = lon)
-        }
-        Log.d(TAG, "WGS распознано точек: ${out.size}")
-        return out
-    }
-
-    private fun parseArray(raw: String): JSONArray? {
-        val s = raw.trim()
-        if (s.isEmpty()) return null
-        return try {
-            JSONArray(s)
-        } catch (_: Exception) {
-            val start = s.indexOf('[')
-            val end = s.lastIndexOf(']')
-            if (start in 0 until end) {
-                try { JSONArray(s.substring(start, end + 1)) } catch (_: Exception) { null }
-            } else null
-        }
+        throw lastError ?: GeminiException("Все модели Gemini недоступны")
     }
 
     // ── Кроп и кодирование ──────────────────────────────────────
-
-    private data class NormRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
-
-    private fun normalizeRect(viewRect: RectF, imageViewRect: RectF): NormRect {
-        if (imageViewRect.isEmpty) return NormRect(0f, 0f, 1f, 1f)
-        val w = imageViewRect.width()
-        val h = imageViewRect.height()
-        val l = ((viewRect.left   - imageViewRect.left) / w).coerceIn(0f, 1f)
-        val t = ((viewRect.top    - imageViewRect.top)  / h).coerceIn(0f, 1f)
-        val r = ((viewRect.right  - imageViewRect.left) / w).coerceIn(0f, 1f)
-        val b = ((viewRect.bottom - imageViewRect.top)  / h).coerceIn(0f, 1f)
-        return NormRect(l, t, r, b)
-    }
-
-    private fun rectStr(n: NormRect): String =
-        "left=%.3f top=%.3f right=%.3f bottom=%.3f".format(n.left, n.top, n.right, n.bottom)
 
     @Suppress("unused")
     private fun unionBitmapRect(

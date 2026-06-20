@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.coordscanner.adapter.NamedCoordAdapter
 import com.coordscanner.databinding.ActivityColumnSelectorBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
@@ -352,16 +353,13 @@ class ColumnSelectorActivity : AppCompatActivity() {
     ): List<MatchedRow> {
         if (AiPrefs.isReadyToTry()) {
             Log.i(TAG, "AI attempt: source=${AiPrefs.source()}")
-            val result = runCatching {
-                GeminiScanner.scanSk42Columns(
-                    bitmap = bitmap,
-                    nameRect = nameRect,
-                    xRect = xRect,
-                    yRect = yRect,
-                    imageViewRect = imageRect,
-                    apiKey = AiPrefs.apiKey(),
-                )
-            }
+            val result = AiCascade.scanSk42Columns(
+                bitmap = bitmap,
+                nameRect = nameRect,
+                xRect = xRect,
+                yRect = yRect,
+                imageViewRect = imageRect,
+            )
             val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
             Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())

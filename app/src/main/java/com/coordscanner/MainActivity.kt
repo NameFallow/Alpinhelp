@@ -8,6 +8,9 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -90,16 +93,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettingsDialog() {
-        val current = CoordsPrefs.getMode(this)
-        val options = arrayOf("СК-42  (Гаусс-Крюгер)", "WGS-84  (широта / долгота °)")
-        val checkedIdx = if (current == CoordsPrefs.SK42) 0 else 1
+        val view = layoutInflater.inflate(R.layout.dialog_settings, null)
+
+        val tvStatus = view.findViewById<TextView>(R.id.tv_ai_status)
+        val tvReason = view.findViewById<TextView>(R.id.tv_ai_reason)
+        if (AiPrefs.isActive()) {
+            tvStatus.setText(R.string.autoscanner_active)
+            tvStatus.setTextColor(Color.parseColor("#2E7D32"))
+        } else {
+            tvStatus.setText(R.string.autoscanner_inactive)
+            tvStatus.setTextColor(Color.parseColor("#C62828"))
+        }
+        tvReason.text = AiPrefs.statusReason()
+
+        val rg = view.findViewById<RadioGroup>(R.id.rg_cs)
+        val rbSk42 = view.findViewById<RadioButton>(R.id.rb_sk42)
+        val rbWgs  = view.findViewById<RadioButton>(R.id.rb_wgs)
+        if (CoordsPrefs.getMode(this) == CoordsPrefs.SK42) rbSk42.isChecked = true
+        else rbWgs.isChecked = true
+        rg.setOnCheckedChangeListener { _, id ->
+            CoordsPrefs.setMode(
+                this,
+                if (id == R.id.rb_sk42) CoordsPrefs.SK42 else CoordsPrefs.WGS84
+            )
+        }
+
         AlertDialog.Builder(this)
-            .setTitle("Система координат ввода")
-            .setSingleChoiceItems(options, checkedIdx) { dialog, idx ->
-                CoordsPrefs.setMode(this, if (idx == 0) CoordsPrefs.SK42 else CoordsPrefs.WGS84)
-                dialog.dismiss()
-            }
-            .setNegativeButton("Закрыть", null)
+            .setTitle("Настройки")
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 

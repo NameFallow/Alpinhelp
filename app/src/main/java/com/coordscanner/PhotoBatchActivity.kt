@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import com.coordscanner.adapter.CoordResultAdapter
 import com.coordscanner.databinding.ActivityPhotoBatchBinding
 import com.coordscanner.model.Point
+import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
 import com.coordscanner.utils.GeminiScanner
@@ -294,9 +295,7 @@ class PhotoBatchActivity : AppCompatActivity() {
     private suspend fun scan(bitmap: Bitmap): Pair<List<ParsedCoord>, String?> {
         if (AiPrefs.isReadyToTry()) {
             Log.i(TAG, "AI attempt: source=${AiPrefs.source()}")
-            val result = runCatching {
-                GeminiScanner.scanBatch(bitmap = bitmap, apiKey = AiPrefs.apiKey())
-            }
+            val result = AiCascade.scanBatch(bitmap = bitmap)
             val aiRows = result.getOrNull()
             if (!aiRows.isNullOrEmpty()) return aiRows to null
             Log.w(TAG, "AI fallback → ML Kit", result.exceptionOrNull())
