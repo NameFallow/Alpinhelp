@@ -29,6 +29,7 @@ import com.coordscanner.utils.AiBadge
 import com.coordscanner.utils.AiCascade
 import com.coordscanner.utils.AiPrefs
 import com.coordscanner.utils.CoordConverter
+import com.coordscanner.utils.CoordsPrefs
 import com.coordscanner.utils.GeminiScanner
 import com.coordscanner.utils.GpxExporter
 import com.coordscanner.utils.MatchedRow
@@ -52,6 +53,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
         private const val TAG = "ColumnSelector"
     }
 
+    private enum class CoordFormat { SK42, WGS84 }
+
     private lateinit var binding: ActivityColumnSelectorBinding
     private val viewModel: PointViewModel by viewModels()
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -65,6 +68,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
     private var imageRect = RectF()
 
     private lateinit var adapter: NamedCoordAdapter
+
+    private var coordFormat: CoordFormat = CoordFormat.SK42
 
     // ── Разрешения и галерея ─────────────────────────────────
 
@@ -219,6 +224,22 @@ class ColumnSelectorActivity : AppCompatActivity() {
 
         // Callback: состояние изменилось (activeType сменился)
         binding.overlayView.onSelectionStateChanged = { updateSelectionUI() }
+
+        // Тумблер формата: подтянуть сохранённый выбор и навесить слушатель.
+        coordFormat = if (CoordsPrefs.getScanFormat(this) == CoordsPrefs.WGS84)
+            CoordFormat.WGS84 else CoordFormat.SK42
+        binding.toggleFormat.check(
+            if (coordFormat == CoordFormat.SK42) R.id.btnFormatSk42 else R.id.btnFormatWgs84
+        )
+        binding.toggleFormat.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            coordFormat = if (checkedId == R.id.btnFormatWgs84) CoordFormat.WGS84 else CoordFormat.SK42
+            CoordsPrefs.setScanFormat(
+                this,
+                if (coordFormat == CoordFormat.WGS84) CoordsPrefs.WGS84 else CoordsPrefs.SK42
+            )
+            updateSelectionUI()
+        }
     }
 
     // Переключает режим выделения: повторный тап отменяет, не очищая готовый прямоугольник
@@ -260,6 +281,8 @@ class ColumnSelectorActivity : AppCompatActivity() {
 
     private fun updateSelectionUI() {
         val overlay = binding.overlayView
+        val xLabel = if (coordFormat == CoordFormat.WGS84) "ШИРОТА" else "X"
+        val yLabel = if (coordFormat == CoordFormat.WGS84) "ДОЛГОТА" else "Y"
         styleColumnButton(
             binding.btnColName,
             confirmed = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.NAME) != null,
@@ -272,21 +295,25 @@ class ColumnSelectorActivity : AppCompatActivity() {
             confirmed = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.X) != null,
             active    = overlay.activeType == SelectionOverlayView.ColumnType.X,
             color     = SelectionOverlayView.COLOR_X,
-            label     = "X"
+            label     = xLabel
         )
         styleColumnButton(
             binding.btnColY,
             confirmed = overlay.getConfirmedRect(SelectionOverlayView.ColumnType.Y) != null,
             active    = overlay.activeType == SelectionOverlayView.ColumnType.Y,
             color     = SelectionOverlayView.COLOR_Y,
-            label     = "Y"
+            label     = yLabel
         )
 
         val allReady = overlay.hasAllRects()
         val anyActive = overlay.activeType != null
+        val readyHint = if (coordFormat == CoordFormat.WGS84)
+            "Колонки: имя, широта, долгота. Нажмите СКАНИРОВАТЬ"
+        else
+            "Все колонки выделены. Нажмите СКАНИРОВАТЬ"
         binding.tvSelectionStatus.text = when {
             anyActive  -> "Нарисуйте прямоугольник вокруг нужной колонки"
-            allReady   -> "Все колонки выделены. Нажмите СКАНИРОВАТЬ"
+            allReady   -> readyHint
             else       -> "Нажмите кнопку, затем нарисуйте область на фото"
         }
         binding.btnScanColumns.isEnabled = allReady && !anyActive
@@ -352,18 +379,39 @@ class ColumnSelectorActivity : AppCompatActivity() {
         xRect: RectF,
         yRect: RectF,
     ): List<MatchedRow> {
+        val isWgs = coordFormat == CoordFormat.WGS84
         if (AiPrefs.isReadyToTry()) {
-            Log.i(TAG, "AI attempt: source=${AiPrefs.source()}")
-            val result = AiCascade.scanSk42Columns(
-                bitmap = bitmap,
-                nameRect = nameRect,
-                xRect = xRect,
-                yRect = yRect,
-                imageViewRect = imageRect,
-            )
+            Log.i(TAG, "AI attempt: source=${AiPrefs.source()} format=$coordFormat")
+            val result = if (isWgs) {
+                AiCascade.scanWgsColumns(
+                    bitmap = bitmap,
+                    nameRect = nameRect,
+                    latRect = xRect,
+                    lonRect = yRect,
+                    imageViewRect = imageRect,
+                )
+            } else {
+                AiCascade.scanSk42Columns(
+                    bitmap = bitmap,
+                    nameRect = nameRect,
+                    xRect = xRect,
+                    yRect = yRect,
+                    imageViewRect = imageRect,
+                )
+            }
             val rows = result.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
             val err = result.exceptionOrNull()
+            if (isWgs) {
+                // ML Kit fallback под WGS-84 ещё не реализован (RowMatcher ждёт СК-42-числа).
+                Log.w(TAG, "WGS AI failed, ML Kit fallback не поддерживается", err)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ColumnSelectorActivity,
+                        "AI: ${AiBadge.describe(err)} — для WGS-84 нужен AI-ключ",
+                        Toast.LENGTH_LONG).show()
+                }
+                return emptyList()
+            }
             Log.w(TAG, "AI fallback → ML Kit", err)
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@ColumnSelectorActivity,
@@ -372,6 +420,14 @@ class ColumnSelectorActivity : AppCompatActivity() {
             }
         } else {
             Log.i(TAG, "AI skipped: ${if (!AiPrefs.isEnabled()) "выкл" else "нет ключа"}")
+            if (isWgs) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ColumnSelectorActivity,
+                        "WGS-84 поддерживается только через AI. Включите AI-ключ в Настройках.",
+                        Toast.LENGTH_LONG).show()
+                }
+                return emptyList()
+            }
         }
         return runMlKitMatch(bitmap, nameRect, xRect, yRect)
     }
@@ -457,6 +513,17 @@ class ColumnSelectorActivity : AppCompatActivity() {
     }
 
     private fun rowToPoint(row: MatchedRow): Point {
+        if (row.isWgs84) {
+            return Point(
+                name     = row.name.ifEmpty { "Точка" },
+                xSk42    = 0.0,
+                ySk42    = 0.0,
+                zone     = 0,
+                latWgs84 = row.lat,
+                lonWgs84 = row.lon,
+                source   = "scan"
+            )
+        }
         val (lat, lon) = CoordConverter.sk42ToWgs84(row.x, row.y, row.zone)
         return Point(
             name     = row.name.ifEmpty { "Точка" },

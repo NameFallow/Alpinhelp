@@ -50,6 +50,33 @@ object AiCascade {
         groq = { key -> GroqScanner.scanWgs(bitmap = bitmap, mode = mode, apiKey = key) },
     )
 
+    suspend fun scanWgsColumns(
+        bitmap: Bitmap,
+        nameRect: RectF,
+        latRect: RectF,
+        lonRect: RectF,
+        imageViewRect: RectF,
+    ): Result<List<MatchedRow>> = runChain(
+        anthropic = { key ->
+            AnthropicScanner.scanWgsColumns(
+                bitmap = bitmap, nameRect = nameRect, latRect = latRect, lonRect = lonRect,
+                imageViewRect = imageViewRect, apiKey = key,
+            )
+        },
+        openrouter = { key ->
+            OpenRouterScanner.scanWgsColumns(
+                bitmap = bitmap, nameRect = nameRect, latRect = latRect, lonRect = lonRect,
+                imageViewRect = imageViewRect, apiKey = key,
+            )
+        },
+        groq = { key ->
+            GroqScanner.scanWgsColumns(
+                bitmap = bitmap, nameRect = nameRect, latRect = latRect, lonRect = lonRect,
+                imageViewRect = imageViewRect, apiKey = key,
+            )
+        },
+    )
+
     suspend fun scanSk42Free(
         bitmap: Bitmap,
         mode: GeminiScanner.WgsMode,

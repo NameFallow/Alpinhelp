@@ -81,6 +81,23 @@ object OpenRouterScanner {
         ScanParsers.parseWgsResponse(json)
     }
 
+    suspend fun scanWgsColumns(
+        bitmap: Bitmap,
+        nameRect: RectF,
+        latRect: RectF,
+        lonRect: RectF,
+        imageViewRect: RectF,
+        apiKey: String,
+    ): List<MatchedRow> = withContext(Dispatchers.IO) {
+        require(apiKey.isNotBlank()) { "OpenRouter API ключ не задан" }
+        val base64 = encodeJpegBase64(downscale(bitmap))
+        val nameFr = ScanPrompts.normalizeRect(nameRect, imageViewRect)
+        val latFr  = ScanPrompts.normalizeRect(latRect,  imageViewRect)
+        val lonFr  = ScanPrompts.normalizeRect(lonRect,  imageViewRect)
+        val json = callOpenRouter(apiKey, ScanPrompts.wgsColumns(nameFr, latFr, lonFr), base64)
+        ScanParsers.parseWgsResponse(json)
+    }
+
     suspend fun scanSk42Free(
         bitmap: Bitmap,
         mode: GeminiScanner.WgsMode,
