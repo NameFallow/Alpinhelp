@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         AiPrefs.clearStaleError()
+        AiPrefs.assumeOkOnFirstRun()
         refreshAiStatusBadge()
     }
 

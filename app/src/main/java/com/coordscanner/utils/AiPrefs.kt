@@ -128,6 +128,23 @@ object AiPrefs {
             .apply()
     }
 
+    // Оптимистично пометить ok, если ключи зашиты и ни одного реального вызова
+    // ещё не было. Решает залип красной плашки на свежей установке: BuildConfig
+    // содержит ключ, но isActive() требует прошлый успех. Вызывать после init()
+    // на старте MainActivity. Если ключ реально мёртвый — следующий скан вернёт
+    // markError и плашка снова покраснеет с правильной причиной.
+    fun assumeOkOnFirstRun() {
+        if (!::sp.isInitialized) return
+        if (!isEnabled()) return
+        if (!(hasAnthropicKey() || hasOpenRouterKey() || hasGroqKey())) return
+        if (lastOkAt() > 0L) return   // уже был реальный успех — не вмешиваемся
+        sp.edit()
+            .putLong(KEY_LAST_OK_AT, System.currentTimeMillis())
+            .remove(KEY_LAST_ERR_AT)
+            .remove(KEY_LAST_ERR_MSG)
+            .apply()
+    }
+
     fun lastOkAt(): Long  = if (::sp.isInitialized) sp.getLong(KEY_LAST_OK_AT, 0L) else 0L
     fun lastErrAt(): Long = if (::sp.isInitialized) sp.getLong(KEY_LAST_ERR_AT, 0L) else 0L
     fun lastErrMsg(): String? = if (::sp.isInitialized) sp.getString(KEY_LAST_ERR_MSG, null) else null
