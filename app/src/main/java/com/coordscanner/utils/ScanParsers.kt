@@ -117,7 +117,9 @@ internal object ScanParsers {
 
     // Чистим имя от типового мусора: если AI вернул вместо имени саму координату
     // (полностью числовое значение, совпадающее с x/y), либо явный плейсхолдер —
-    // подставляем "Точка". Длинные строки тоже подозрительны: режем до 64 символов.
+    // подставляем "Точка". Длина имени до 256: в реальных таблицах встречаются
+    // полные описания позиций («ЗРПК Панцирь С1 — 2,5 км юго зап. н.п. Никаноровка»),
+    // их нельзя резать.
     private fun cleanName(raw: String, a: Double, b: Double): String {
         val s = raw.trim()
         if (s.isEmpty()) return "Точка"
@@ -128,6 +130,6 @@ internal object ScanParsers {
                 return "Точка"
             }
         }
-        return if (s.length > 64) s.substring(0, 64) else s
+        return if (s.length > 256) s.substring(0, 256) else s
     }
 }
