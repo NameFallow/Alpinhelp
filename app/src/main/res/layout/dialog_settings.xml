@@ -30,6 +30,18 @@
         android:textColor="?android:attr/textColorSecondary"
         tools:text="Всё в порядке" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_reset_ai_status"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginTop="6dp"
+        android:text="Сбросить статус"
+        android:textSize="11sp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingHorizontal="12dp" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

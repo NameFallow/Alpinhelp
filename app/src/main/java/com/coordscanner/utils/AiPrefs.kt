@@ -99,6 +99,31 @@ object AiPrefs {
             .apply()
     }
 
+    // Сбрасывает запомненную ошибку если она старше 60 секунд и с тех пор не было
+    // успехов. Решает залип красной плашки после смены ключей / переустановки APK:
+    // SharedPreferences не чистятся при reinstall, прошлый сбой тянется до явного
+    // успеха. Вызывать при возврате на главный экран.
+    fun clearStaleError() {
+        if (!::sp.isInitialized) return
+        val errAt = lastErrAt()
+        if (errAt > 0 && lastOkAt() < errAt &&
+            System.currentTimeMillis() - errAt > 60_000L) {
+            sp.edit()
+                .remove(KEY_LAST_ERR_AT)
+                .remove(KEY_LAST_ERR_MSG)
+                .apply()
+        }
+    }
+
+    // Принудительный сброс — для кнопки «Сбросить статус» в настройках.
+    fun forceClearStatus() {
+        if (!::sp.isInitialized) return
+        sp.edit()
+            .remove(KEY_LAST_ERR_AT)
+            .remove(KEY_LAST_ERR_MSG)
+            .apply()
+    }
+
     fun lastOkAt(): Long  = if (::sp.isInitialized) sp.getLong(KEY_LAST_OK_AT, 0L) else 0L
     fun lastErrAt(): Long = if (::sp.isInitialized) sp.getLong(KEY_LAST_ERR_AT, 0L) else 0L
     fun lastErrMsg(): String? = if (::sp.isInitialized) sp.getString(KEY_LAST_ERR_MSG, null) else null

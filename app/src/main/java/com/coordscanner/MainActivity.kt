@@ -85,6 +85,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        AiPrefs.clearStaleError()
         refreshAiStatusBadge()
     }
 
@@ -141,6 +142,19 @@ class MainActivity : AppCompatActivity() {
             tvStatus.setTextColor(Color.parseColor("#C62828"))
         }
         tvReason.text = AiPrefs.statusReason()
+
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_reset_ai_status)
+            .setOnClickListener {
+                AiPrefs.forceClearStatus()
+                tvStatus.setText(
+                    if (AiPrefs.isActive()) R.string.autoscanner_active else R.string.autoscanner_inactive
+                )
+                tvStatus.setTextColor(
+                    Color.parseColor(if (AiPrefs.isActive()) "#2E7D32" else "#C62828")
+                )
+                tvReason.text = AiPrefs.statusReason()
+                refreshAiStatusBadge()
+            }
 
         val etGemini = view.findViewById<EditText>(R.id.et_gemini_key)
         val etAnthropic = view.findViewById<EditText>(R.id.et_anthropic_key)
