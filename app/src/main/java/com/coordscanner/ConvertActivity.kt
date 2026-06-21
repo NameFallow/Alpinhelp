@@ -136,7 +136,8 @@ class ConvertActivity : AppCompatActivity() {
 
                 val result = withContext(Dispatchers.IO) {
                     runCatching {
-                        val outName  = conversionManager.outputName(doc.name!!, fmt)
+                        val sourceName = doc.name ?: return@runCatching null
+                        val outName  = conversionManager.outputName(sourceName, fmt)
                         val data     = conversionManager.convert(doc, fmt)
                         val existing = folder.findFile(outName)
                         val target   = if (overwrite && existing != null) {

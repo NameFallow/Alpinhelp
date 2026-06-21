@@ -17,6 +17,8 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/navy_deep"
+            android:theme="@style/ThemeOverlay.CoordScanner.Toolbar"
+            app:popupTheme="@style/ThemeOverlay.MaterialComponents.Light"
             app:titleTextColor="@color/white"
             app:subtitleTextColor="@color/text_secondary" />
 
@@ -423,7 +425,7 @@
         android:contentDescription="Экспорт GPX"
         android:src="@android:drawable/ic_menu_share"
         app:backgroundTint="@color/navy_surface"
-        app:tint="@color/text_secondary"
+        app:tint="@color/white"
         app:elevation="4dp"
         android:visibility="gone" />
 

@@ -37,7 +37,6 @@ import com.coordscanner.viewmodel.PointViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -198,7 +197,7 @@ class PhotoZoneActivity : AppCompatActivity() {
     }
 
     private fun loadFromUri(uri: Uri) {
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val bmp = runCatching {
                 contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
             }.onFailure { Log.e(TAG, "loadFromUri failed", it) }.getOrNull()

@@ -21,6 +21,9 @@ interface PointDao {
     @Delete
     suspend fun delete(point: Point)
 
+    @Query("DELETE FROM points")
+    suspend fun deleteAll()
+
     @Query("SELECT * FROM points WHERE id = :id")
     suspend fun getById(id: Long): Point?
 }

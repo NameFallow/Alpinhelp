@@ -10,5 +10,6 @@ class PointRepository(private val dao: PointDao) {
     suspend fun insertAll(points: List<Point>) = dao.insertAll(points)
     suspend fun update(point: Point) = dao.update(point)
     suspend fun delete(point: Point) = dao.delete(point)
+    suspend fun deleteAll() = dao.deleteAll()
     suspend fun getById(id: Long) = dao.getById(id)
 }

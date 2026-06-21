@@ -35,4 +35,8 @@ class PointViewModel(application: Application) : AndroidViewModel(application) {
     fun delete(point: Point) = viewModelScope.launch {
         repository.delete(point)
     }
+
+    fun deleteAll() = viewModelScope.launch {
+        repository.deleteAll()
+    }
 }

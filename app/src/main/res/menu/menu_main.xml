@@ -6,6 +6,10 @@
         android:title="@string/action_export"
         app:showAsAction="ifRoom|withText" />
     <item
+        android:id="@+id/action_clear_all"
+        android:title="Очистить все точки"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_settings"
         android:title="Настройки"
         app:showAsAction="never" />

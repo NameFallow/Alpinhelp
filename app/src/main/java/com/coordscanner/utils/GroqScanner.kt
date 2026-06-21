@@ -32,7 +32,7 @@ object GroqScanner {
         "meta-llama/llama-4-scout-17b-16e-instruct",
     )
 
-    private const val MAX_SIDE_PX = 2048
+    private const val MAX_SIDE_PX = 2560
     private const val JPEG_QUALITY = 90
     private const val MAX_TOKENS = 4096
 
@@ -150,6 +150,7 @@ object GroqScanner {
                         }
                         throw GroqException("HTTP ${resp.code}: $short")
                     }
+                    if (text.isBlank()) throw GroqException("Пустое тело ответа модели")
                     val root = JSONObject(text)
                     val choices = root.optJSONArray("choices")
                         ?: throw GroqException("Нет choices в ответе")

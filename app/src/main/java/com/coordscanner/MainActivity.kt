@@ -104,9 +104,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.action_export   -> { exportGpx(); true }
-        R.id.action_settings -> { showSettingsDialog(); true }
+        R.id.action_export    -> { exportGpx(); true }
+        R.id.action_clear_all -> { confirmClearAll(); true }
+        R.id.action_settings  -> { showSettingsDialog(); true }
         else -> super.onOptionsItemSelected(item)
+    }
+
+    private fun confirmClearAll() {
+        val count = viewModel.allPoints.value?.size ?: 0
+        if (count == 0) {
+            AlertDialog.Builder(this)
+                .setTitle("Очистить точки")
+                .setMessage("Список и так пуст.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Удалить все точки?")
+            .setMessage("Будут удалены все $count точек. Действие необратимо.")
+            .setPositiveButton("Удалить все") { _, _ -> viewModel.deleteAll() }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun showSettingsDialog() {

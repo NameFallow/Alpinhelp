@@ -23,4 +23,11 @@
         <item name="strokeColor">@color/navy_stroke</item>
         <item name="strokeWidth">1dp</item>
     </style>
+
+    <style name="ThemeOverlay.CoordScanner.Toolbar" parent="ThemeOverlay.MaterialComponents.Dark.ActionBar">
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="actionMenuTextColor">@color/white</item>
+        <item name="colorControlNormal">@color/white</item>
+    </style>
 </resources>

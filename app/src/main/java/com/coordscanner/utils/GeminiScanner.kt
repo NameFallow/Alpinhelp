@@ -236,6 +236,7 @@ object GeminiScanner {
                         // 404/429/5xx и прочее — пробуем следующую модель.
                         throw GeminiException("HTTP ${resp.code}: $short")
                     }
+                    if (text.isBlank()) throw GeminiException("Пустое тело ответа модели")
                     val root = JSONObject(text)
                     val candidates = root.optJSONArray("candidates")
                         ?: throw GeminiException("Нет candidates в ответе")

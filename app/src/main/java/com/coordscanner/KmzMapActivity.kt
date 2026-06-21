@@ -36,6 +36,12 @@ class KmzMapActivity : AppCompatActivity() {
     private var markersOverlay = FolderOverlay()
     private var loadedPoints: List<WayPoint> = emptyList()
 
+    // Иконки маркеров создаются один раз и переиспользуются на всех точках —
+    // иначе при 50+ маркерах в LRU оседают 50+ Bitmap-ов, и карта рано или поздно
+    // ловит OutOfMemoryError на больших KMZ.
+    private val defaultMarkerIcon: Drawable by lazy { makeDefaultIcon() }
+    private val cameraMarkerIcon: Drawable by lazy { makeCameraIcon() }
+
     private val openKmzLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             uri?.let { loadKmzFile(it) }
@@ -109,7 +115,7 @@ class KmzMapActivity : AppCompatActivity() {
                 position = GeoPoint(pt.lat, pt.lon)
                 title = pt.name
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                icon = if (pt.photoPath != null) makeCameraIcon() else makeDefaultIcon()
+                icon = if (pt.photoPath != null) cameraMarkerIcon else defaultMarkerIcon
                 infoWindow = CustomInfoWindow(mapView, pt)
             }
             markersOverlay.add(marker)
@@ -156,7 +162,11 @@ class KmzMapActivity : AppCompatActivity() {
         val dp = resources.displayMetrics.density
         val r = (dp * 10).toInt()
         val sz = r * 2
-        val bmp = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
+        val bmp = try {
+            Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
+        } catch (oom: OutOfMemoryError) {
+            return android.graphics.drawable.ColorDrawable(Color.RED)
+        }
         val canvas = Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         paint.color = Color.RED
@@ -172,7 +182,11 @@ class KmzMapActivity : AppCompatActivity() {
     private fun makeCameraIcon(): Drawable {
         val dp = resources.displayMetrics.density
         val sz = (dp * 28).toInt()
-        val bmp = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
+        val bmp = try {
+            Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
+        } catch (oom: OutOfMemoryError) {
+            return android.graphics.drawable.ColorDrawable(Color.parseColor("#1565C0"))
+        }
         val canvas = Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 

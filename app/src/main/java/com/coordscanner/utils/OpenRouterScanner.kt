@@ -37,7 +37,7 @@ object OpenRouterScanner {
         "google/gemini-flash-1.5",
     )
 
-    private const val MAX_SIDE_PX = 2048
+    private const val MAX_SIDE_PX = 2560
     private const val JPEG_QUALITY = 90
     private const val MAX_TOKENS = 4096
 
@@ -159,6 +159,7 @@ object OpenRouterScanner {
                         }
                         throw OpenRouterException("HTTP ${resp.code}: $short")
                     }
+                    if (text.isBlank()) throw OpenRouterException("Пустое тело ответа модели")
                     val root = JSONObject(text)
                     val choices = root.optJSONArray("choices")
                         ?: throw OpenRouterException("Нет choices в ответе")

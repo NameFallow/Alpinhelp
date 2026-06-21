@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.documentfile.provider.DocumentFile
 import com.coordscanner.model.WayPoint
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 
 class ConversionManager(private val context: Context) {
 
@@ -18,7 +19,7 @@ class ConversionManager(private val context: Context) {
         val points: List<WayPoint> = context.contentResolver
             .openInputStream(inputDoc.uri)
             ?.use { parserFor(inputFormat).parse(it) }
-            ?: emptyList()
+            ?: throw IOException("Не удалось открыть файл: $name")
 
         return ByteArrayOutputStream().also { buf ->
             exporterFor(outputFormat).export(points, buf)

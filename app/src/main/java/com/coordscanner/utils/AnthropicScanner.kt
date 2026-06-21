@@ -35,7 +35,7 @@ object AnthropicScanner {
         "claude-3-haiku-20240307",
     )
 
-    private const val MAX_SIDE_PX = 2048
+    private const val MAX_SIDE_PX = 2560
     private const val JPEG_QUALITY = 90
     private const val MAX_TOKENS = 4096
 
@@ -161,6 +161,7 @@ object AnthropicScanner {
                         }
                         throw AnthropicException("HTTP ${resp.code}: $short")
                     }
+                    if (text.isBlank()) throw AnthropicException("Пустое тело ответа модели")
                     val root = JSONObject(text)
                     val contentArr = root.optJSONArray("content")
                         ?: throw AnthropicException("Нет content в ответе")

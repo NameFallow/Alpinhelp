@@ -31,8 +31,20 @@ class FileBrowserBottomSheet : BottomSheetDialogFragment() {
     private val b get() = _b!!
 
     private var onPicked: ((File) -> Unit)? = null
-    private var currentDir: File = Environment.getExternalStorageDirectory()
+    private var currentDir: File = defaultRoot()
     private val adapter = FileAdapter()
+
+    private fun defaultRoot(): File {
+        // Environment.getExternalStorageDirectory() с API 30+ может вернуть путь,
+        // куда нет доступа без MANAGE_EXTERNAL_STORAGE. Если папка нечитаема —
+        // фолбэк на app-scoped storage, который всегда работает без разрешений.
+        val ext = runCatching { Environment.getExternalStorageDirectory() }.getOrNull()
+        if (ext != null && ext.canRead()) return ext
+        val ctx = context
+        val appExt = ctx?.getExternalFilesDir(null)
+        if (appExt != null && appExt.canRead()) return appExt
+        return File("/")
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, saved: Bundle?,
@@ -73,8 +85,15 @@ class FileBrowserBottomSheet : BottomSheetDialogFragment() {
     /** Кнопки-shortcuts: память + AlpineQuest (если папка найдена). */
     private fun buildShortcuts() {
         b.chipShortcuts.removeAllViews()
-        b.chipShortcuts.addView(makeChip("🏠 Память", Environment.getExternalStorageDirectory()))
-        b.chipShortcuts.addView(makeChip("📥 Download", File(Environment.getExternalStorageDirectory(), "Download")))
+        val ext = runCatching { Environment.getExternalStorageDirectory() }.getOrNull()
+        if (ext != null && ext.canRead()) {
+            b.chipShortcuts.addView(makeChip("🏠 Память", ext))
+            val dl = File(ext, "Download")
+            if (dl.canRead()) b.chipShortcuts.addView(makeChip("📥 Download", dl))
+        }
+        context?.getExternalFilesDir(null)?.let { app ->
+            if (app.canRead()) b.chipShortcuts.addView(makeChip("📂 Папка приложения", app))
+        }
         findAlpineQuestDir()?.let { aq ->
             b.chipShortcuts.addView(makeChip("📁 AlpineQuest", aq))
         }
@@ -88,7 +107,8 @@ class FileBrowserBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun findAlpineQuestDir(): File? {
-        val ext = Environment.getExternalStorageDirectory()
+        val ext = runCatching { Environment.getExternalStorageDirectory() }.getOrNull()
+            ?: return null
         val candidates = listOf(
             File(ext, "Android/data/psyberia.alpinequest.full/files"),
             File(ext, "Android/data/psyberia.alpinequest.free/files"),
