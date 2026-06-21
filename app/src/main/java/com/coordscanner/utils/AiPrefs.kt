@@ -100,27 +100,31 @@ object AiPrefs {
     }
 
     // Сбрасывает запомненную ошибку если она старше 60 секунд и с тех пор не было
-    // успехов. Решает залип красной плашки после смены ключей / переустановки APK:
-    // SharedPreferences не чистятся при reinstall, прошлый сбой тянется до явного
-    // успеха. Вызывать при возврате на главный экран.
+    // успехов. ТАКЖЕ включает AI обратно если он был выключен — флаг enabled залипал
+    // в false с прошлых версий, где тап по плашке AiBadge переключал AI вкл/выкл.
+    // Решает залип красной плашки после смены ключей / переустановки APK:
+    // SharedPreferences не чистятся при reinstall.
     fun clearStaleError() {
         if (!::sp.isInitialized) return
         val errAt = lastErrAt()
-        if (errAt > 0 && lastOkAt() < errAt &&
-            System.currentTimeMillis() - errAt > 60_000L) {
-            sp.edit()
-                .remove(KEY_LAST_ERR_AT)
-                .remove(KEY_LAST_ERR_MSG)
-                .apply()
-        }
+        val staleErr = errAt > 0 && lastOkAt() < errAt &&
+            System.currentTimeMillis() - errAt > 60_000L
+        val disabled = !sp.getBoolean(KEY_ENABLED, true)
+        if (!staleErr && !disabled) return
+        val ed = sp.edit()
+        if (staleErr) ed.remove(KEY_LAST_ERR_AT).remove(KEY_LAST_ERR_MSG)
+        if (disabled) ed.putBoolean(KEY_ENABLED, true)
+        ed.apply()
     }
 
     // Принудительный сброс — для кнопки «Сбросить статус» в настройках.
+    // Чистит запомненную ошибку И принудительно включает AI.
     fun forceClearStatus() {
         if (!::sp.isInitialized) return
         sp.edit()
             .remove(KEY_LAST_ERR_AT)
             .remove(KEY_LAST_ERR_MSG)
+            .putBoolean(KEY_ENABLED, true)
             .apply()
     }
 
