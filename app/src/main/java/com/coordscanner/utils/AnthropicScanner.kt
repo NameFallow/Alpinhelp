@@ -29,10 +29,10 @@ object AnthropicScanner {
     private const val ANTHROPIC_VERSION = "2023-06-01"
 
     // Каскад моделей Claude с подтверждённым vision-входом.
+    // На 2026: 3.5-* сняты для новых аккаунтов → 4.6 / 4.5.
     private val MODEL_CHAIN = listOf(
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "claude-3-haiku-20240307",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5-20251001",
     )
 
     private const val MAX_SIDE_PX = 2560
