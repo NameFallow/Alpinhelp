@@ -84,6 +84,34 @@ class GpxManagerViewModel : ViewModel() {
         _selected.value  = emptySet()
     }
 
+    /**
+     * Перекрасить выделенные точки. Выделение сохраняется (уже с новым цветом).
+     * @return сколько точек перекрашено
+     */
+    fun recolorSelected(hex: String): Int {
+        val sel = _selected.value.orEmpty()
+        if (sel.isEmpty()) return 0
+        _allPoints.value = _allPoints.value.orEmpty().map {
+            if (it in sel) it.copy(color = hex) else it
+        }
+        _selected.value = sel.map { it.copy(color = hex) }.toSet()
+        sourceModified = true
+        return sel.size
+    }
+
+    /**
+     * Добавить в новый файл все точки с карты (с текущими цветами), минуя буфер.
+     * Уже добавленные точки не дублируются.
+     * @return сколько точек добавлено
+     */
+    fun addAllToNewFile(): Int {
+        val existing = _newFile.value.orEmpty()
+        val seen = existing.toHashSet()
+        val toAdd = _allPoints.value.orEmpty().filter { seen.add(it) }
+        if (toAdd.isNotEmpty()) _newFile.value = existing + toAdd
+        return toAdd.size
+    }
+
     fun pasteToNewFile() {
         _newFile.value = _newFile.value.orEmpty() + _buffer.value.orEmpty()
     }

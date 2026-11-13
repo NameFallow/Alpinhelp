@@ -48,7 +48,7 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     private lateinit var mapView: MapView
     private var markersOverlay = FolderOverlay()
     private var polygonOverlay: MapPolygonOverlay? = null
-    private val iconCache = LruCache<String, Drawable>(32)
+    private val iconCache = LruCache<String, Drawable>(96)
 
     private var isSelectMode = false
     private var isAddMode = false
@@ -321,7 +321,9 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
                 position  = GeoPoint(wp.lat, wp.lon)
                 title     = wp.name
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon      = getMarkerIcon(if (wp in selected) "SELECTED" else wp.color)
+                // Выделенная точка рисуется своим цветом в жёлтом кольце — так сразу
+                // видно результат перекраски, не снимая выделение.
+                icon      = getMarkerIcon(wp.color, selected = wp in selected)
             }
             markersOverlay.add(m)
         }
@@ -332,25 +334,37 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
         mapView.invalidate()
     }
 
-    private fun getMarkerIcon(colorKey: String): Drawable {
-        iconCache[colorKey]?.let { return it }
-        val color = when (colorKey) {
-            "SELECTED" -> Color.YELLOW
-            else -> try { Color.parseColor(colorKey) } catch (e: Exception) { Color.RED }
-        }
+    private fun getMarkerIcon(colorHex: String, selected: Boolean): Drawable {
+        val cacheKey = if (selected) "SEL|$colorHex" else colorHex
+        iconCache[cacheKey]?.let { return it }
+        val color = try { Color.parseColor(colorHex) } catch (e: Exception) { Color.RED }
         val dp = resources.displayMetrics.density
-        val r  = (dp * 8).toInt()
+        val r  = (dp * (if (selected) 11 else 8)).toInt()
         val sz = r * 2
+        val c  = r.toFloat()
         val bmp = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = color
-        canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
-        paint.color = Color.WHITE
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 1.5f
-        canvas.drawCircle(r.toFloat(), r.toFloat(), r - 1.5f, paint)
-        return BitmapDrawable(resources, bmp).also { iconCache.put(colorKey, it) }
+        if (selected) {
+            // Жёлтое кольцо выделения с тёмной обводкой (читается на любом фоне и цвете)
+            val ring = dp * 3.5f
+            paint.color = Color.BLACK
+            canvas.drawCircle(c, c, c - 0.5f, paint)
+            paint.color = Color.YELLOW
+            canvas.drawCircle(c, c, c - 1.5f, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(c, c, c - ring, paint)
+            paint.color = color
+            canvas.drawCircle(c, c, c - ring - 1f, paint)
+        } else {
+            paint.color = color
+            canvas.drawCircle(c, c, c - 1.5f, paint)
+            paint.color = Color.WHITE
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 1.5f
+            canvas.drawCircle(c, c, c - 1.5f, paint)
+        }
+        return BitmapDrawable(resources, bmp).also { iconCache.put(cacheKey, it) }
     }
 
     // --- Загрузка файла любого формата через FileImporter ---
@@ -420,10 +434,11 @@ class GpxManagerActivity : AppCompatActivity(), LayerSwitcherBottomSheet.OnLayer
     @Deprecated("Use OnBackPressedDispatcher")
     override fun onBackPressed() {
         when {
-            vm.sourceModified -> {
+            // sourceUri есть только у GPX — только его можно перезаписать на месте
+            vm.sourceModified && vm.sourceUri != null -> {
                 AlertDialog.Builder(this)
                     .setTitle("Несохранённые изменения")
-                    .setMessage("Исходный файл был изменён (вырезаны точки). Сохранить?")
+                    .setMessage("Точки исходного файла были изменены (вырезаны или перекрашены). Сохранить в исходный файл?")
                     .setPositiveButton("Сохранить") { _, _ -> saveSourceFile(); finish() }
                     .setNegativeButton("Не сохранять") { _, _ -> @Suppress("DEPRECATION") super.onBackPressed() }
                     .setNeutralButton("Отмена", null)

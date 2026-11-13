@@ -66,6 +66,23 @@
         app:backgroundTint="@color/primary_variant"
         app:cornerRadius="12dp" />
 
+    <!-- Изменить цвет выделенных -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnColor"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginBottom="8dp"
+        android:text="Изменить цвет"
+        android:textSize="15sp"
+        android:textColor="@color/text_primary"
+        app:icon="@drawable/color_circle"
+        app:iconSize="20dp"
+        app:iconPadding="10dp"
+        app:iconTint="@color/accent"
+        app:strokeColor="@color/accent"
+        app:cornerRadius="12dp" />
+
     <!-- Удалить -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnDelete"

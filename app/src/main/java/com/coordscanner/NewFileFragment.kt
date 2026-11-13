@@ -61,6 +61,13 @@ class NewFileFragment : BottomSheetDialogFragment() {
             Toast.makeText(requireContext(), "Вставлено ${vm.buffer.value?.size ?: 0} точек", Toast.LENGTH_SHORT).show()
         }
 
+        // Все точки с карты (с текущими цветами) — сразу в файл, без буфера
+        b.btnAddAll.setOnClickListener {
+            val n = vm.addAllToNewFile()
+            val msg = if (n > 0) "Добавлено $n точек с карты" else "Новых точек на карте нет"
+            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+        }
+
         b.btnClear.setOnClickListener {
             AlertDialog.Builder(requireContext())
                 .setTitle("Очистить файл")
