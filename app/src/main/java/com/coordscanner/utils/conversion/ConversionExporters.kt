@@ -33,7 +33,9 @@ class KmlConversionExporter(private val context: Context? = null) : FormatExport
             val effectiveHref: (WayPoint) -> String? = { p ->
                 when {
                     p.builtInIconName != null -> "files/${p.builtInIconName}"
-                    p.symbol != null          -> p.symbol
+                    // Стандартные картинки Google (wht-circle и т.п.) значком не считаем:
+                    // AlpineQuest рисует их как есть и цвет к ним не применяет.
+                    p.symbol != null && !isGoogleStockIcon(p.symbol) -> p.symbol
                     else                      -> null
                 }
             }
@@ -46,8 +48,12 @@ class KmlConversionExporter(private val context: Context? = null) : FormatExport
             for (sk in styleKeys) {
                 w.write("  <Style id=\"${styleId(sk.color, sk.iconHref)}\">\n")
                 w.write("    <IconStyle><color>${hexToKmlColor(sk.color)}</color>\n")
-                val href = sk.iconHref ?: "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png"
-                w.write("      <Icon><href>$href</href></Icon>\n")
+                // Без своего значка <Icon> не пишем вовсе: тогда AlpineQuest рисует
+                // собственную метку и красит её в <color>. С любой картинкой
+                // (раньше тут подставлялась белая wht-circle) цвет игнорируется.
+                if (sk.iconHref != null) {
+                    w.write("      <Icon><href>${sk.iconHref.xmlEscape()}</href></Icon>\n")
+                }
                 w.write("    </IconStyle>\n  </Style>\n")
             }
 
@@ -69,6 +75,10 @@ class KmlConversionExporter(private val context: Context? = null) : FormatExport
             w.flush()
         }
     }
+
+    private fun isGoogleStockIcon(href: String): Boolean =
+        href.contains("maps.google.com/mapfiles", ignoreCase = true) ||
+            href.contains("maps.gstatic.com/mapfiles", ignoreCase = true)
 
     private fun hexToKmlColor(hex: String): String {
         val c = hex.trimStart('#').padStart(6, '0').uppercase(Locale.US)
